@@ -9,5 +9,6 @@
 - Never commit secrets, tokens, or other sensitive credentials.
 - Ask the project team before making major architectural changes.
 - Record agent work and user verification in `AGENT-LOG.md`.
+- For material repository work, add or update one dated weekly entry in `docs/log.md`. Record what was tried, what happened, what was decided, and related issues, commits, tags, or pull requests when available. Update the existing entry for the current week instead of creating duplicate entries for every small action.
 
 Keep changes consistent with the existing project structure and document assumptions when requirements are still evolving.

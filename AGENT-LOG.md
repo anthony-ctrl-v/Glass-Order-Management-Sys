@@ -50,7 +50,27 @@ This file records agent-assisted work and the related user verification for this
 - User verification: Confirm that the local log now contains issue history only.
 - Follow-up: Create and manage milestones in GitHub when access and project planning details are available.
 
-## Future Entry Template — Issue #006+
+## Issue #006 — Repository-Based Wiki Template
+
+- Date: 2026-09-21
+- Agent: GitHub Copilot
+- Work completed: Added a private repository-based wiki template under `docs/` with Home, weekly Log, Design, Results, Reading, and Appendix pages, plus navigation from `docs/README.md`.
+- Files changed: `docs/README.md`, `docs/home.md`, `docs/log.md`, `docs/design.md`, `docs/results.md`, `docs/reading.md`, `docs/appendix.md`, and `AGENT-LOG.md`.
+- Tests or checks run: Reviewed the page links and template structure; no application code was changed.
+- User verification: Review the new documentation pages and confirm that the headings and placeholders fit the intended wiki structure.
+- Follow-up: Record future agent-assisted work as Issue #007 or higher.
+
+## Issue #007 — Agent Weekly Log Instruction
+
+- Date: 2026-09-21
+- Agent: GitHub Copilot
+- Work completed: Updated `AGENTS.md` to require dated weekly updates in `docs/log.md` for material repository work, and added the current week’s documentation entry.
+- Files changed: `AGENTS.md`, `docs/log.md`, and `AGENT-LOG.md`.
+- Tests or checks run: Reviewed the instruction and confirmed the weekly log follows the existing template.
+- User verification: Review the instruction and confirm that future material agent work should be summarized in the current weekly log entry.
+- Follow-up: Record future agent-assisted work as Issue #008 or higher and update the current week in `docs/log.md` when appropriate.
+
+## Future Entry Template — Issue #008+
 
 - Agent:
 - Task:
