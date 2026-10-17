@@ -40,7 +40,7 @@ Initial project setup. The repository currently contains project documentation o
 
 1. Clone the repository.
 2. Create a feature branch for your work.
-3. Review `AGENTS.md` and the documentation in `docs/` before making changes.
+3. Review `AGENTS.md` and the project [GitHub Wiki](https://github.com/anthony-ctrl-v/Glass-Order-Management-Sys/wiki) before making changes.
 4. Install the project dependencies once the application manifests are added.
 5. Configure local environment variables using a future example environment file. Do not commit secrets or tokens.
 6. Start the development server using the project command documented here once implementation begins.
