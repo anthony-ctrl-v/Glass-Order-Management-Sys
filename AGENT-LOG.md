@@ -70,7 +70,17 @@ This file records agent-assisted work and the related user verification for this
 - User verification: Review the instruction and confirm that future material agent work should be summarized in the current weekly log entry.
 - Follow-up: Record future agent-assisted work as Issue #008 or higher and update the current week in `docs/log.md` when appropriate.
 
-## Future Entry Template — Issue #008+
+## Issue #008 — Remove Local Wiki After GitHub Verification
+
+- Date: 2026-10-17
+- Agent: GitHub Copilot
+- Work completed: Removed the duplicate repository-based Wiki from `docs/` after the user verified the GitHub Wiki contents. Updated the root README and agent guidance to point to the GitHub Wiki instead.
+- Files changed: `README.md`, `AGENTS.md`, `AGENT-LOG.md`, and the former Wiki files under `docs/`.
+- Tests or checks run: Verified the exact old Wiki files before deletion and ran `git diff --check` after the updates.
+- User verification: User confirmed that the GitHub Wiki contents were correct before requesting deletion of the old local Wiki.
+- Follow-up: Use the separate GitHub Wiki repository for future Wiki pages and weekly logs.
+
+## Future Entry Template — Issue #009+
 
 - Agent:
 - Task:
