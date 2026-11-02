@@ -39,8 +39,14 @@ Milestone 1 is implemented: customer/contact management, order entry, order item
 1. Clone the repository.
 2. Install Node.js 20.19+ and PostgreSQL 16+.
 3. Run `npm install`.
-4. Create an empty PostgreSQL database named `glass_orders`.
-5. Copy `apps/api/.env.example` to `apps/api/.env` and set `DATABASE_URL` to your local PostgreSQL database.
+4. Create the development database role and database (Homebrew PostgreSQL on macOS):
+   ```sh
+   createuser --login glass_orders_app
+   createdb --owner=glass_orders_app glass_orders
+   createdb --owner=glass_orders_app glass_orders_shadow
+   ```
+   The shadow database is used by Prisma to safely check migrations. The Homebrew development cluster uses local trust authentication by default. Keep the server bound to localhost; use password authentication and a non-publicly accessible database for any shared or deployed environment.
+5. Copy `apps/api/.env.example` to `apps/api/.env`.
 6. Run `npm run db:migrate` to create the database tables.
 7. Run `npm run dev`, then open the frontend at <http://localhost:5173>.
 

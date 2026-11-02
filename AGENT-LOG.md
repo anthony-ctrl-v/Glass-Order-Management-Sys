@@ -118,9 +118,21 @@ This file records agent-assisted work and the related user verification for this
 - Agent: GitHub Copilot
 - Work completed: Implemented the first agreed milestone using React/TypeScript, Express/TypeScript, PostgreSQL, and Prisma. Added customer and one-to-one default-contact records, order and order-item records, order-specific billing/shipping address and shipping-contact snapshots, generated order numbers and stable line numbers, saved two-decimal unit prices, and calculated line/order totals. Added customer create/edit, order creation, order status changes, and responsive dashboard screens.
 - Files changed: `README.md`, `.gitignore`, root/npm workspace manifests, and `apps/api` and `apps/web` application files including the Prisma schema and initial PostgreSQL migration.
-- Tests or checks run: `npm run build`; `npm test` (5 passing tests); Prisma schema validation; initial migration diff reviewed against the schema; `npm audit` (0 vulnerabilities); `git diff --check`; API health and frontend HTTP smoke checks; mocked browser flow for creating an order and displaying its calculated total.
+- Tests or checks run: `npm run build`; `npm test` (5 passing tests); Prisma schema validation; initial migration diff reviewed against the schema; `npm audit` (0 vulnerabilities); `git diff --check`; API health and frontend HTTP smoke checks; mocked browser flow for creating an order and displaying its calculated total; later verified the migration and customer/order CRUD against local PostgreSQL.
 - User verification: Not yet performed.
 - Follow-up:
-  - Apply the migration and run database-backed customer/order CRUD verification in an environment with PostgreSQL configured. This environment has no PostgreSQL server, `psql`, Docker, or `DATABASE_URL`, so live database integration could not be exercised here.
   - Continue with milestone 2 for glass products and specifications after milestone 1 is merged.
   - Keep physical pane/unit tracking, production workflow, staff access, and deferred fulfillment features in their planned later milestones.
+
+## Issue #012 — Local PostgreSQL Development Setup
+
+- Date: 2026-11-01
+- Agent: GitHub Copilot
+- Work completed: Installed and started Homebrew PostgreSQL 16 locally, created a dedicated `glass_orders_app` role and `glass_orders` database, and created a dedicated `glass_orders_shadow` database for Prisma migration checks. Configured the API’s local `.env` from the tracked example and updated Prisma config/README setup instructions.
+- Files changed: `README.md`, `apps/api/.env.example`, `apps/api/prisma.config.ts`. The local `apps/api/.env` is ignored and not committed.
+- Tests or checks run: Applied the initial Prisma migration successfully; created, read, and updated a temporary customer/order through the API; verified order totals, default contact/address snapshots, and that snapshots stay unchanged after customer defaults are edited; removed the temporary test records. `npm run build`, `npm test` (5 passing), `npm audit` (0 vulnerabilities), Prisma validation, and `git diff --check` passed.
+- User verification: Local development database setup is complete; review the app at `http://localhost:5173`.
+- Follow-up:
+  - Keep local PostgreSQL 16 running for development.
+  - Use password authentication and a non-publicly accessible database for any shared or deployed environment; the local Homebrew cluster is configured for local development.
+  - Continue with milestone 2 after confirming the milestone 1 app workflow.
