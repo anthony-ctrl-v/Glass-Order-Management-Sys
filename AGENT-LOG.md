@@ -80,12 +80,34 @@ This file records agent-assisted work and the related user verification for this
 - User verification: User confirmed that the GitHub Wiki contents were correct before requesting deletion of the old local Wiki.
 - Follow-up: Use the separate GitHub Wiki repository for future Wiki pages and weekly logs.
 
-## Future Entry Template — Issue #009+
+## Issue #009 — Order and Production Tracking Requirements
 
-- Agent:
-- Task:
-- Files changed:
-- Summary of changes:
-- Tests or checks run:
-- User verification:
+- Date: 2026-10-31
+- Agent: GitHub Copilot
+- Work completed: Began a two-day requirements-definition effort (October 31–November 1) for a PostgreSQL relational schema covering customers and contacts, orders and order items, glass specifications, and pane/unit production tracking.
+- Files changed: `AGENT-LOG.md`; GitHub Wiki `Log.md`.
+- Tests or checks run: Reviewed the existing agent log and Wiki log; no application code or schema was changed.
+- User verification: Requirements remain under discussion and must be confirmed before implementation.
 - Follow-up:
+  - See Issue #010 for the consolidated requirements and deferred scope.
+
+## Issue #010 — Relational Schema Requirements Review
+
+- Date: 2026-11-01
+- Agent: GitHub Copilot
+- Work completed: Completed the two-day requirements-definition effort and recorded the following agreed implementation baseline:
+  - **Customer and order:** A business Customer has a legal name, general phone/email, default billing/shipping addresses, and one default contact (name, phone, email, optional role/title and notes). Each Order references the Customer, has an automatically generated order number, creation/due dates, and an order-lifecycle status separate from production. The order snapshots billing/shipping addresses and copies the default contact into editable order-specific shipping-contact fields.
+  - **Order Item and pricing:** Each line has a stable line number within its Order, one glass make/specification, quantity of finished units, and a saved unit price. Line total is quantity × unit price; Order total is the sum of its lines.
+  - **Glass specifications and catalogs:** One Glass Unit specification belongs to each Order Item and stores overall width/height in inches, construction type (monolithic, insulated, laminated, or laminated-insulated), and optional notes. The form may prefill 12 × 12 inches, but users can change it. Pane specifications are ordered exterior-to-interior and store an editable-catalog glass product, numeric-inch thickness and dimensions (displayed as fractions), heat treatment (none/tempered/heat strengthened), holes yes/no, and edge work (none/flat polish/bevel, with flat polish and bevel selectable together). Glass-product catalog entries have a name, optional manufacturer/description, and active flag.
+  - **Surfaces and construction details:** Each pane has Side A facing the unit exterior and Side B facing inward; unit-wide surface numbers are calculated from pane position. A surface can have multiple treatments from an editable catalog; treatment types have active and facility-work-required flags, and every required treatment creates its own checklist step. Laminating Interlayers belong to a Glass Unit specification, reference the two adjacent pane specifications, and allow multiple sequenced sheets per gap with editable material/color, decimal-inch thickness, and optional free-text brand. Each adjacent-pane gap has one Insulating Cavity with editable spacer type/color, numeric-inch width (displayed as a fraction), and gas-filled yes/no. Interlayer and spacer colors use separate catalogs.
+  - **Physical tracking and barcodes:** Create one Physical Glass Unit for every unit in the ordered quantity, with barcode `order_number-item_line_number-unit_number`. Create one Physical Pane per pane position for each unit, linked to its unit and pane specification, with barcode `order_number-item_line_number-unit_number-pane_position`. Each physical pane progresses independently. A unit view shows overall readiness and each pane’s current department/status.
+  - **Departments, steps, and checklists:** Editable departments are Cutting, Tempering/Heatstrength, Edge Work, Drilling for Holes, Sandblast, Painting, Lamination, and Insulation. Reusable step types have a default department and configurable delay threshold. Checklists are generated from order specifications before production, then preserved if setup defaults change; pane-level requirements generate pane steps, while lamination/insulation generate unit-level steps. There is no separate configurable rule-builder in the initial scope. The standard pane sequence is cutting, heat treatment if specified, holes if required, required non-paint surface treatments, selected edge work, then painting if required. Unit assembly follows pane work; laminated-insulated units laminate before insulating.
+  - **Scans, readiness, and audit:** Every checklist step has its own `staged` → `in_progress` → `ready` scan history with timestamp and employee. A ready scan alerts the next department via its work queue; the receiving department marks the item staged when picked up. Delay flags appear on department queues when the latest staged/in-progress status exceeds that step’s threshold, measured in Monday–Friday working days (holidays ignored initially); the timer resets on each status scan. Checklist edits are allowed at any time for authorized users and audited with actor, time, reason, action, affected step, and old/new values. Pane/unit statuses and readiness are derived from checklists and scans. Completing required pane and unit work yields “ready to ship.”
+  - **Staff access:** Staff records have display name, unique work login/email, active status, one role (Administrator, Production Staff, or Supervisor), and association with one or more departments. Scans and checklist edits reference the staff record.
+  - **Deferred scope:** Actual packing/shipping records and shipped status, order-completion records, backorders, and notification recipients are future work requiring further requirements. Initial scope includes “ready to ship,” department work queues, and delay flags, but does not implement shipment completion or recipient notifications.
+- Files changed: `AGENT-LOG.md`; GitHub Wiki `Log.md`.
+- Tests or checks run: Reviewed the requirements with the user and ran `git diff --check`; no application code or database schema was changed.
+- User verification: The user confirmed the summarized table groups and relationships. This is the agreed working baseline for implementation; deferred workflows remain out of scope until separately defined.
+- Follow-up:
+  - Implement the confirmed baseline in the existing application after inspecting its current architecture and database conventions.
+  - Define and implement order completion, backorders, packing/shipping, shipped status, and notification recipients in later work.
