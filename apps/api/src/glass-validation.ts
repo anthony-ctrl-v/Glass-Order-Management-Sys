@@ -50,14 +50,16 @@ export const glassUnitSchema = z.object({
   })).max(19),
 }).superRefine((unit, context) => {
   const gapCount = unit.panes.length - 1;
-  const isLaminated = unit.construction === "LAMINATED" || unit.construction === "LAMINATED_INSULATED";
-  const isInsulated = unit.construction === "INSULATED" || unit.construction === "LAMINATED_INSULATED";
+  const isLaminatedInsulated = unit.construction === "LAMINATED_INSULATED";
 
   if (unit.construction === "MONOLITHIC" && unit.panes.length !== 1) {
     context.addIssue({ code: "custom", path: ["panes"], message: "Monolithic glass must have exactly one pane." });
   }
   if (unit.construction !== "MONOLITHIC" && unit.panes.length < 2) {
     context.addIssue({ code: "custom", path: ["panes"], message: "This construction requires at least two panes." });
+  }
+  if (isLaminatedInsulated && unit.panes.length < 3) {
+    context.addIssue({ code: "custom", path: ["panes"], message: "Laminated-insulated construction requires at least three panes so lamination and insulation occupy separate gaps." });
   }
 
   unit.panes.forEach((pane, index) => {
@@ -82,18 +84,33 @@ export const glassUnitSchema = z.object({
     }
   }
   for (const gap of expectedGaps) {
-    if (isLaminated && !interlayerGaps.has(gap)) {
+    const hasInterlayer = interlayerGaps.has(gap);
+    const hasCavity = cavityGaps.has(gap);
+    if (isLaminatedInsulated && hasInterlayer && hasCavity) {
+      context.addIssue({ code: "custom", path: ["interlayers", "cavities"], message: `Gap ${gap} cannot be both laminated and insulated.` });
+    } else if (isLaminatedInsulated && !hasInterlayer && !hasCavity) {
+      context.addIssue({ code: "custom", path: ["interlayers", "cavities"], message: `Choose either lamination or an insulating cavity for gap ${gap}.` });
+    } else if (unit.construction === "LAMINATED" && !hasInterlayer) {
       context.addIssue({ code: "custom", path: ["interlayers"], message: `Laminated construction requires an interlayer in gap ${gap}.` });
     }
-    if (!isLaminated && interlayerGaps.has(gap)) {
-      context.addIssue({ code: "custom", path: ["interlayers"], message: "Interlayers are only valid for laminated construction." });
-    }
-    if (isInsulated && !cavityGaps.has(gap)) {
+    if (unit.construction === "INSULATED" && !hasCavity) {
       context.addIssue({ code: "custom", path: ["cavities"], message: `Insulated construction requires a cavity in gap ${gap}.` });
     }
-    if (!isInsulated && cavityGaps.has(gap)) {
+    if (unit.construction === "MONOLITHIC" && (hasInterlayer || hasCavity)) {
+      context.addIssue({ code: "custom", path: ["interlayers", "cavities"], message: "Monolithic construction cannot have interlayers or insulating cavities." });
+    }
+    if (unit.construction !== "LAMINATED" && !isLaminatedInsulated && hasInterlayer) {
+      context.addIssue({ code: "custom", path: ["interlayers"], message: "Interlayers are only valid for laminated construction." });
+    }
+    if (unit.construction !== "INSULATED" && !isLaminatedInsulated && hasCavity) {
       context.addIssue({ code: "custom", path: ["cavities"], message: "Cavities are only valid for insulated construction." });
     }
+  }
+  if (isLaminatedInsulated && ![...interlayerGaps].some((gap) => expectedGaps.has(gap))) {
+    context.addIssue({ code: "custom", path: ["interlayers"], message: "Laminated-insulated construction requires at least one laminated gap." });
+  }
+  if (isLaminatedInsulated && ![...cavityGaps].some((gap) => expectedGaps.has(gap))) {
+    context.addIssue({ code: "custom", path: ["cavities"], message: "Laminated-insulated construction requires at least one insulating gap." });
   }
   for (const gapNumber of expectedGaps) {
     const sheetNumbers = unit.interlayers

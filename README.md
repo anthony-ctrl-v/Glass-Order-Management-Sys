@@ -13,7 +13,7 @@ Glass-manufacturing orders can require many specifications, production steps, de
 - Customer and contact management
 - Order entry with structured glass-unit specifications and measurements
 - Editable glass-product, treatment, interlayer, and spacer catalogs
-- Ordered pane specifications, two treated surfaces per pane, and interlayer/cavity details for each pane gap
+- Ordered pane specifications, two treated surfaces per pane, and a distinct lamination or insulating-cavity selection for each pane gap
 - Order status and production-stage tracking
 - Scheduling and assignment of production work
 - Searchable order history

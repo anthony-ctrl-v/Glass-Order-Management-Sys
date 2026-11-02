@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { api } from "./api";
 import { formatInches } from "./format-inches";
 import type { GlassCatalogEntry, GlassCatalogKind, GlassUnit, GlassUnitInput } from "./types";
@@ -117,22 +117,24 @@ function resizeForConstruction(
   const count = construction === "MONOLITHIC" ? 1 : Math.max(2, Math.min(20, paneCount));
   const panes = Array.from({ length: count }, (_, index) => current.panes[index] ?? newPane(catalogs));
   const gapCount = count - 1;
-  const laminated = construction === "LAMINATED" || construction === "LAMINATED_INSULATED";
-  const insulated = construction === "INSULATED" || construction === "LAMINATED_INSULATED";
-  const interlayers = laminated
+  const laminated = construction === "LAMINATED";
+  const insulated = construction === "INSULATED";
+  const laminatedInsulated = construction === "LAMINATED_INSULATED";
+  const interlayers = laminated || laminatedInsulated
     ? Array.from({ length: gapCount }, (_, gapIndex) => {
         const gapNumber = gapIndex + 1;
         const existing = current.interlayers.filter((layer) => layer.gapNumber === gapNumber);
-        return (existing.length ? existing : [defaultInterlayer(catalogs, gapNumber, 1)])
+        return (existing.length || laminatedInsulated ? existing : [defaultInterlayer(catalogs, gapNumber, 1)])
           .map((layer, sheetIndex) => ({ ...layer, gapNumber, sheetNumber: sheetIndex + 1 }));
       }).flat()
     : [];
-  const cavities = insulated
+  const cavities = insulated || laminatedInsulated
     ? Array.from({ length: gapCount }, (_, gapIndex) => {
         const gapNumber = gapIndex + 1;
-        return current.cavities.find((cavity) => cavity.gapNumber === gapNumber)
-          ?? defaultCavity(catalogs, gapNumber);
+        const existing = current.cavities.find((cavity) => cavity.gapNumber === gapNumber);
+        return existing ?? (laminatedInsulated ? undefined : defaultCavity(catalogs, gapNumber));
       })
+        .filter((cavity): cavity is NonNullable<typeof cavity> => cavity !== undefined)
     : [];
   return { ...current, construction, panes, interlayers, cavities };
 }
@@ -223,8 +225,9 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
   }
 
   const gaps = Array.from({ length: Math.max(0, draft.panes.length - 1) }, (_, index) => index + 1);
-  const laminated = draft.construction === "LAMINATED" || draft.construction === "LAMINATED_INSULATED";
-  const insulated = draft.construction === "INSULATED" || draft.construction === "LAMINATED_INSULATED";
+  const laminated = draft.construction === "LAMINATED";
+  const insulated = draft.construction === "INSULATED";
+  const laminatedInsulated = draft.construction === "LAMINATED_INSULATED";
   const selectedCatalogIds = [
     ...draft.panes.map((pane) => pane.glassProductId),
     ...draft.panes.flatMap((pane) => pane.surfaces.flatMap((surface) => surface.treatmentIds)),
@@ -233,11 +236,64 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
   ];
   const requiredKinds: GlassCatalogKind[] = [
     "GLASS_PRODUCT",
-    ...(laminated ? ["INTERLAYER_MATERIAL", "INTERLAYER_COLOR"] as const : []),
-    ...(insulated ? ["SPACER_TYPE", "SPACER_COLOR"] as const : []),
+    ...(laminated || laminatedInsulated ? ["INTERLAYER_MATERIAL", "INTERLAYER_COLOR"] as const : []),
+    ...(insulated || laminatedInsulated ? ["SPACER_TYPE", "SPACER_COLOR"] as const : []),
   ];
   const hasCatalogKinds = requiredKinds.every((kind) => entriesOf(catalogs, kind).some((entry) =>
     entry.active || selectedCatalogIds.includes(entry.id)));
+  const isComplete = !laminatedInsulated || (
+    gaps.every((gapNumber) =>
+      draft.interlayers.some((layer) => layer.gapNumber === gapNumber)
+      !== draft.cavities.some((cavity) => cavity.gapNumber === gapNumber))
+    && draft.interlayers.length > 0
+    && draft.cavities.length > 0
+  );
+
+  function setGapType(gapNumber: number, type: "NONE" | "LAMINATED" | "INSULATED") {
+    setDraft((current) => {
+      const interlayers = current.interlayers.filter((layer) => layer.gapNumber !== gapNumber);
+      const cavities = current.cavities.filter((cavity) => cavity.gapNumber !== gapNumber);
+      if (type === "LAMINATED") {
+        interlayers.push(defaultInterlayer(catalogs, gapNumber, 1));
+      }
+      if (type === "INSULATED") {
+        cavities.push(defaultCavity(catalogs, gapNumber));
+      }
+      return { ...current, interlayers, cavities };
+    });
+  }
+
+  function renderGap(gapNumber: number) {
+    const layers = draft.interlayers.map((layer, index) => ({ layer, index })).filter(({ layer }) => layer.gapNumber === gapNumber);
+    const cavityIndex = draft.cavities.findIndex((cavity) => cavity.gapNumber === gapNumber);
+    const hasInterlayer = layers.length > 0;
+    const gapType = hasInterlayer ? "LAMINATED" : cavityIndex >= 0 ? "INSULATED" : "NONE";
+    const isMixedConstruction = laminatedInsulated;
+    return <section className={`gap-editor ${gapType.toLowerCase()}`} key={`gap-${gapNumber}`}>
+      <div className="line-title">Gap {gapNumber} · between panes {gapNumber} and {gapNumber + 1}</div>
+      {isMixedConstruction ? (
+        <label>Gap type<select value={gapType} onChange={(event) => setGapType(gapNumber, event.target.value as "NONE" | "LAMINATED" | "INSULATED")}>
+          <option value="NONE">Choose later</option><option value="LAMINATED">Laminated</option><option value="INSULATED">Insulating cavity</option>
+        </select></label>
+      ) : <p className="gap-type-label">{gapType === "LAMINATED" ? "Laminated gap" : "Insulating cavity gap"}</p>}
+      {gapType === "LAMINATED" && <>
+        <div className="section-rule"><span>LAMINATING INTERLAYERS</span><button className="text-button" type="button" onClick={() => setDraft((current) => ({ ...current, interlayers: [...current.interlayers, defaultInterlayer(catalogs, gapNumber, layers.length + 1)] }))}>+ Add sheet</button></div>
+        {layers.map(({ layer, index }) => <div className="pane-editor" key={`layer-${layer.sheetNumber}`}>
+          <div className="line-title">Interlayer sheet {layer.sheetNumber}{layers.length > 1 && <button className="remove-button" type="button" aria-label={`Remove interlayer sheet ${layer.sheetNumber}`} onClick={() => setDraft((current) => ({ ...current, interlayers: current.interlayers.filter((_, layerIndex) => layerIndex !== index).map((item) => item.gapNumber === gapNumber ? { ...item, sheetNumber: item.sheetNumber > layer.sheetNumber ? item.sheetNumber - 1 : item.sheetNumber } : item) }))}>×</button>}</div>
+          <label>Material<CatalogSelect catalogs={catalogs} kind="INTERLAYER_MATERIAL" value={layer.materialId} onChange={(value) => updateInterlayer(index, { materialId: value })} /></label>
+          <label>Color<CatalogSelect catalogs={catalogs} kind="INTERLAYER_COLOR" value={layer.colorId} onChange={(value) => updateInterlayer(index, { colorId: value })} /></label>
+          <div className="line-fields"><label>Thickness (in)<input required type="number" min="0.0001" step="0.0001" value={layer.thickness} onChange={(event) => updateInterlayer(index, { thickness: Number(event.target.value) })} /></label><label>Brand <span className="optional">optional</span><input value={layer.brand} onChange={(event) => updateInterlayer(index, { brand: event.target.value })} /></label></div>
+        </div>)}
+      </>}
+      {gapType === "INSULATED" && cavityIndex >= 0 && <div className="pane-editor">
+        <div className="line-title">Insulating cavity</div>
+        <label>Spacer type<CatalogSelect catalogs={catalogs} kind="SPACER_TYPE" value={draft.cavities[cavityIndex].spacerTypeId} onChange={(value) => updateCavity(cavityIndex, { spacerTypeId: value })} /></label>
+        <label>Spacer color<CatalogSelect catalogs={catalogs} kind="SPACER_COLOR" value={draft.cavities[cavityIndex].spacerColorId} onChange={(value) => updateCavity(cavityIndex, { spacerColorId: value })} /></label>
+        <label>Cavity width (in)<input required type="number" min="0.0001" step="0.0001" value={draft.cavities[cavityIndex].width} onChange={(event) => updateCavity(cavityIndex, { width: Number(event.target.value) })} /><small className="measurement-hint">{formatInches(draft.cavities[cavityIndex].width)}</small></label>
+        <label className="checkbox-label"><input type="checkbox" checked={draft.cavities[cavityIndex].gasFilled} onChange={(event) => updateCavity(cavityIndex, { gasFilled: event.target.checked })} /> Gas-filled</label>
+      </div>}
+    </section>;
+  }
 
   return (
     <form className="glass-unit-editor form-stack" onSubmit={(event) => void submit(event)}>
@@ -256,7 +312,8 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
         {draft.construction !== "MONOLITHIC" && <button className="text-button" type="button" disabled={draft.panes.length >= 20} onClick={() => setDraft((current) => resizeForConstruction(current, current.construction, current.panes.length + 1, catalogs))}>+ Add pane</button>}
       </div>
       {draft.panes.map((pane, paneIndex) => (
-        <section className="pane-editor" key={paneIndex}>
+        <Fragment key={paneIndex}>
+        <section className="pane-editor">
           <div className="line-title">Pane {paneIndex + 1} {paneIndex === 0 ? "(exterior)" : paneIndex === draft.panes.length - 1 ? "(interior)" : ""}{paneIndex === draft.panes.length - 1 && draft.panes.length > 2 && <button className="remove-button" type="button" aria-label="Remove last pane" onClick={() => setDraft((current) => resizeForConstruction(current, current.construction, current.panes.length - 1, catalogs))}>×</button>}</div>
           <label>Glass product<CatalogSelect catalogs={catalogs} kind="GLASS_PRODUCT" value={pane.glassProductId} onChange={(value) => updatePane(paneIndex, { glassProductId: value })} /></label>
           <div className="line-fields">
@@ -283,31 +340,11 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
             </fieldset>;
           })}
         </section>
+        {paneIndex < gaps.length && renderGap(paneIndex + 1)}
+        </Fragment>
       ))}
-      {gaps.map((gapNumber) => {
-        const layers = draft.interlayers.map((layer, index) => ({ layer, index })).filter(({ layer }) => layer.gapNumber === gapNumber);
-        const cavityIndex = draft.cavities.findIndex((cavity) => cavity.gapNumber === gapNumber);
-        return <section className="pane-editor" key={`gap-${gapNumber}`}>
-          <div className="line-title">Gap {gapNumber} · between panes {gapNumber} and {gapNumber + 1}</div>
-          {(draft.construction === "LAMINATED" || draft.construction === "LAMINATED_INSULATED") && <>
-            <div className="section-rule"><span>LAMINATING INTERLAYERS</span><button className="text-button" type="button" onClick={() => setDraft((current) => ({ ...current, interlayers: [...current.interlayers, defaultInterlayer(catalogs, gapNumber, layers.length + 1)] }))}>+ Add sheet</button></div>
-            {layers.map(({ layer, index }) => <div className="pane-editor" key={`layer-${layer.sheetNumber}`}>
-              <div className="line-title">Interlayer sheet {layer.sheetNumber}{layers.length > 1 && <button className="remove-button" type="button" aria-label={`Remove interlayer sheet ${layer.sheetNumber}`} onClick={() => setDraft((current) => ({ ...current, interlayers: current.interlayers.filter((_, layerIndex) => layerIndex !== index).map((item) => item.gapNumber === gapNumber ? { ...item, sheetNumber: item.sheetNumber > layer.sheetNumber ? item.sheetNumber - 1 : item.sheetNumber } : item) }))}>×</button>}</div>
-              <label>Material<CatalogSelect catalogs={catalogs} kind="INTERLAYER_MATERIAL" value={layer.materialId} onChange={(value) => updateInterlayer(index, { materialId: value })} /></label>
-              <label>Color<CatalogSelect catalogs={catalogs} kind="INTERLAYER_COLOR" value={layer.colorId} onChange={(value) => updateInterlayer(index, { colorId: value })} /></label>
-              <div className="line-fields"><label>Thickness (in)<input required type="number" min="0.0001" step="0.0001" value={layer.thickness} onChange={(event) => updateInterlayer(index, { thickness: Number(event.target.value) })} /></label><label>Brand <span className="optional">optional</span><input value={layer.brand} onChange={(event) => updateInterlayer(index, { brand: event.target.value })} /></label></div>
-            </div>)}
-          </>}
-          {(draft.construction === "INSULATED" || draft.construction === "LAMINATED_INSULATED") && cavityIndex >= 0 && <div className="pane-editor">
-            <div className="line-title">Insulating cavity</div>
-            <label>Spacer type<CatalogSelect catalogs={catalogs} kind="SPACER_TYPE" value={draft.cavities[cavityIndex].spacerTypeId} onChange={(value) => updateCavity(cavityIndex, { spacerTypeId: value })} /></label>
-            <label>Spacer color<CatalogSelect catalogs={catalogs} kind="SPACER_COLOR" value={draft.cavities[cavityIndex].spacerColorId} onChange={(value) => updateCavity(cavityIndex, { spacerColorId: value })} /></label>
-            <label>Cavity width (in)<input required type="number" min="0.0001" step="0.0001" value={draft.cavities[cavityIndex].width} onChange={(event) => updateCavity(cavityIndex, { width: Number(event.target.value) })} /><small className="measurement-hint">{formatInches(draft.cavities[cavityIndex].width)}</small></label>
-            <label className="checkbox-label"><input type="checkbox" checked={draft.cavities[cavityIndex].gasFilled} onChange={(event) => updateCavity(cavityIndex, { gasFilled: event.target.checked })} /> Gas-filled</label>
-          </div>}
-        </section>;
-      })}
-      <button className="primary-button" type="submit" disabled={saving || !hasCatalogKinds}>{saving ? "Saving specification…" : unit ? "Update glass specification" : "Save glass specification"}<span>→</span></button>
+      {laminatedInsulated && !isComplete && <p className="gap-validation-hint" role="status">For a laminated-insulated unit, use at least three panes to create separate gaps. Assign every gap to either laminated or insulating, with at least one of each, before saving.</p>}
+      <button className="primary-button" type="submit" disabled={saving || !hasCatalogKinds || !isComplete}>{saving ? "Saving specification…" : unit ? "Update glass specification" : "Save glass specification"}<span>→</span></button>
     </form>
   );
 }

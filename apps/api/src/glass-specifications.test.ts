@@ -45,7 +45,20 @@ test("requires one insulating cavity for every adjacent-pane gap", () => {
   assert.equal(result.success, false);
 });
 
-test("accepts matching laminated-insulated interlayers and cavities", () => {
+test("accepts a laminated-insulated unit when separate gaps are laminated and insulated", () => {
+  const result = glassUnitSchema.safeParse({
+    ...monolithic,
+    construction: "LAMINATED_INSULATED",
+    panes: [pane, pane, pane],
+    interlayers: [{ gapNumber: 1, sheetNumber: 1, materialId: "p", colorId: "clear", thickness: 0.03, brand: "" }],
+    cavities: [
+      { gapNumber: 2, spacerTypeId: "warm-edge", spacerColorId: "black", width: 0.5, gasFilled: true },
+    ],
+  });
+  assert.equal(result.success, true);
+});
+
+test("rejects a laminated-insulated gap that is both laminated and insulated", () => {
   const result = glassUnitSchema.safeParse({
     ...monolithic,
     construction: "LAMINATED_INSULATED",
@@ -56,10 +69,31 @@ test("accepts matching laminated-insulated interlayers and cavities", () => {
     ],
     cavities: [
       { gapNumber: 1, spacerTypeId: "warm-edge", spacerColorId: "black", width: 0.5, gasFilled: true },
-      { gapNumber: 2, spacerTypeId: "warm-edge", spacerColorId: "black", width: 0.5, gasFilled: true },
     ],
   });
-  assert.equal(result.success, true);
+  assert.equal(result.success, false);
+});
+
+test("requires every laminated-insulated gap to be assigned and requires both gap types", () => {
+  const result = glassUnitSchema.safeParse({
+    ...monolithic,
+    construction: "LAMINATED_INSULATED",
+    panes: [pane, pane, pane, pane],
+    interlayers: [{ gapNumber: 1, sheetNumber: 1, materialId: "p", colorId: "clear", thickness: 0.03, brand: "" }],
+    cavities: [{ gapNumber: 2, spacerTypeId: "warm-edge", spacerColorId: "black", width: 0.5, gasFilled: true }],
+  });
+  assert.equal(result.success, false);
+});
+
+test("requires at least three panes for separate laminated and insulating gaps", () => {
+  const result = glassUnitSchema.safeParse({
+    ...monolithic,
+    construction: "LAMINATED_INSULATED",
+    panes: [pane, pane],
+    interlayers: [{ gapNumber: 1, sheetNumber: 1, materialId: "p", colorId: "clear", thickness: 0.03, brand: "" }],
+    cavities: [],
+  });
+  assert.equal(result.success, false);
 });
 
 test("rejects construction details that point beyond the available pane gaps", () => {
