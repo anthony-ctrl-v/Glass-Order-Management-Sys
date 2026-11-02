@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "./api";
-import type { Customer, Order } from "./types";
+import { GlassCatalogManager } from "./GlassCatalogManager";
+import { GlassUnitEditor } from "./GlassUnitEditor";
+import { formatInches } from "./format-inches";
+import type { Customer, GlassCatalogEntry, GlassUnit, Order } from "./types";
 
 type CustomerForm = {
   legalName: string;
@@ -88,6 +91,10 @@ function formatCurrency(value: string) {
 export default function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [glassCatalogs, setGlassCatalogs] = useState<GlassCatalogEntry[]>([]);
+  const [activeView, setActiveView] = useState<"orders" | "catalogs">("orders");
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [editingSpecItemId, setEditingSpecItemId] = useState<string | null>(null);
   const [customerForm, setCustomerForm] = useState<CustomerForm>(emptyCustomer);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
@@ -105,9 +112,10 @@ export default function App() {
   async function refresh() {
     setError("");
     try {
-      const [customerRows, orderRows] = await Promise.all([api.customers(), api.orders()]);
+      const [customerRows, orderRows, catalogRows] = await Promise.all([api.customers(), api.orders(), api.glassCatalogs()]);
       setCustomers(customerRows);
       setOrders(orderRows);
+      setGlassCatalogs(catalogRows);
       setSelectedCustomerId((current) => current || customerRows[0]?.id || "");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load records.");
@@ -254,23 +262,29 @@ export default function App() {
           <span className="brand-mark">G</span>
           <span>Glassworks <small>ORDER MANAGEMENT</small></span>
         </a>
-        <span className="topbar-label">Milestone 1 · Customers &amp; orders</span>
+        <nav className="topbar-nav" aria-label="Main navigation">
+          <button type="button" className={activeView === "orders" ? "active" : ""} onClick={() => setActiveView("orders")}>Orders</button>
+          <button type="button" className={activeView === "catalogs" ? "active" : ""} onClick={() => setActiveView("catalogs")}>Glass catalogs</button>
+        </nav>
+        <span className="topbar-label">Milestone 2 · Glass specifications</span>
       </header>
 
       <main className="page">
         <section className="intro">
           <div>
-            <p className="eyebrow">WORKSPACE / OVERVIEW</p>
-            <h1>Orders, clearly in view.</h1>
-            <p className="intro-copy">Start with customer details and order lines. Glass specifications and production tracking are coming in later milestones.</p>
+            <p className="eyebrow">WORKSPACE / {activeView === "orders" ? "ORDERS" : "GLASS CATALOGS"}</p>
+            <h1>{activeView === "orders" ? "Orders, with the glass details." : "Manage glass reference data."}</h1>
+            <p className="intro-copy">{activeView === "orders" ? "Review order items and add their structured glass-unit specifications." : "Maintain the product and process catalogs used by glass-unit specifications."}</p>
           </div>
-          <div className="intro-stat"><strong>{orders.length}</strong><span>orders on file</span></div>
+          <div className="intro-stat"><strong>{activeView === "orders" ? orders.length : glassCatalogs.length}</strong><span>{activeView === "orders" ? "orders on file" : "catalog entries"}</span></div>
         </section>
 
         {error && <div className="alert error" role="alert">{error}</div>}
         {notice && <div className="alert success" role="status">{notice}</div>}
         {loading ? <div className="loading">Loading customer and order records…</div> : (
-          <div className="workspace-grid">
+          activeView === "catalogs" ? (
+            <GlassCatalogManager entries={glassCatalogs} onChanged={() => void refresh()} />
+          ) : <div className="workspace-grid">
             <section className="panel orders-panel">
               <div className="panel-heading">
                 <div><p className="eyebrow">ORDER REGISTER</p><h2>Recent orders</h2></div>
@@ -281,16 +295,26 @@ export default function App() {
               ) : (
                 <div className="table-wrap">
                   <table>
-                    <thead><tr><th>ORDER</th><th>CUSTOMER</th><th>CREATED</th><th>DUE</th><th>STATUS</th><th className="align-right">TOTAL</th></tr></thead>
+                    <thead><tr><th>ORDER</th><th>CUSTOMER</th><th>CREATED</th><th>DUE</th><th>STATUS</th><th className="align-right">TOTAL</th><th>DETAILS</th></tr></thead>
                     <tbody>{orders.map((order) => (
-                      <tr key={order.id}>
-                        <td><strong className="order-number">#{order.orderNumber}</strong><span className="line-count">{order.items.length} line{order.items.length === 1 ? "" : "s"}</span></td>
-                        <td>{order.customer.legalName}</td>
-                        <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-                        <td>{order.dueDate ? new Date(`${order.dueDate}T00:00:00`).toLocaleDateString() : <span className="muted">—</span>}</td>
-                        <td><select className={`status-select ${order.status.toLowerCase()}`} aria-label={`Order ${order.orderNumber} status`} value={order.status} onChange={(event) => void changeOrderStatus(order, event.target.value as Order["status"])}><option value="DRAFT">Draft</option><option value="OPEN">Open</option><option value="CANCELLED">Cancelled</option></select></td>
-                        <td className="align-right">{formatCurrency(order.totalPrice)}</td>
-                      </tr>
+                      <Fragment key={order.id}>
+                        <tr>
+                          <td><strong className="order-number">#{order.orderNumber}</strong><span className="line-count">{order.items.length} line{order.items.length === 1 ? "" : "s"}</span></td>
+                          <td>{order.customer.legalName}</td>
+                          <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                          <td>{order.dueDate ? new Date(`${order.dueDate}T00:00:00`).toLocaleDateString() : <span className="muted">—</span>}</td>
+                          <td><select className={`status-select ${order.status.toLowerCase()}`} aria-label={`Order ${order.orderNumber} status`} value={order.status} onChange={(event) => void changeOrderStatus(order, event.target.value as Order["status"])}><option value="DRAFT">Draft</option><option value="OPEN">Open</option><option value="CANCELLED">Cancelled</option></select></td>
+                          <td className="align-right">{formatCurrency(order.totalPrice)}</td>
+                          <td><button className="edit-button" type="button" aria-expanded={expandedOrderId === order.id} onClick={() => { setExpandedOrderId(expandedOrderId === order.id ? null : order.id); setEditingSpecItemId(null); }}>{expandedOrderId === order.id ? "Hide" : "Items"}</button></td>
+                        </tr>
+                        {expandedOrderId === order.id && <tr key={`${order.id}-details`} className="order-detail-row"><td colSpan={7}>
+                          <div className="order-items-detail">{order.items.map((item) => <section className="order-item-detail" key={item.id}>
+                            <div className="item-detail-heading"><div><strong>Line {item.lineNumber}: {item.description}</strong><span>{item.quantity} unit{item.quantity === 1 ? "" : "s"} · {formatCurrency(item.unitPrice)} each</span></div><button className="edit-button" type="button" aria-expanded={editingSpecItemId === item.id} onClick={() => setEditingSpecItemId(editingSpecItemId === item.id ? null : item.id)}>{editingSpecItemId === item.id ? "Close editor" : item.glassUnit ? "Edit specification" : "Add specification"}</button></div>
+                            {item.glassUnit ? <GlassUnitSummary unit={item.glassUnit} /> : <p className="form-hint">No structured glass specification has been saved for this order item yet.</p>}
+                            {editingSpecItemId === item.id && <GlassUnitEditor orderItemId={item.id} unit={item.glassUnit} catalogs={glassCatalogs} onSaved={() => void refresh()} />}
+                          </section>)}</div>
+                        </td></tr>}
+                      </Fragment>
                     ))}</tbody>
                   </table>
                 </div>
@@ -370,7 +394,7 @@ export default function App() {
             </section>
           </div>
         )}
-        <footer>Glassworks Order Management <span>·</span> Milestone 1 of 4</footer>
+        <footer>Glassworks Order Management <span>·</span> Milestone 2 of 4</footer>
       </main>
     </div>
   );
@@ -395,6 +419,24 @@ function OrderAddressForm({ title, value, onChange }: OrderAddressFormProps) {
         <label>Country<input value={value.country} onChange={(event) => onChange({ ...value, country: event.target.value })} /></label>
       </div>
     </fieldset>
+  );
+}
+
+function GlassUnitSummary({ unit }: { unit: GlassUnit }) {
+  const constructionLabel = unit.construction.toLowerCase().replaceAll("_", " ");
+  return (
+    <div className="glass-unit-summary">
+      <p><strong>{unit.overallWidth} × {unit.overallHeight} in</strong> · {constructionLabel}</p>
+      <div className="pane-summary-list">{unit.panes.map((pane) => <div key={pane.id}>
+        <strong>Pane {pane.position}: {pane.glassProduct.name}</strong>
+        <span>{formatInches(pane.width)} × {formatInches(pane.height)} × {formatInches(pane.thickness)} · {pane.heatTreatment.toLowerCase().replaceAll("_", " ")}{pane.hasHoles ? " · holes" : ""}{pane.flatPolish ? " · flat polish" : ""}{pane.bevel ? " · bevel" : ""}</span>
+        {pane.glassProduct.hasLowESide && <small>Low-E side: {pane.lowESide ? `Side ${pane.lowESide}` : "not specified"}</small>}
+        <small>{pane.surfaces.map((surface) => `Surface ${pane.position * 2 - (surface.side === "A" ? 1 : 0)} (${surface.side}): ${surface.treatments.map((treatment) => treatment.treatment.name).join(", ") || "no treatments"}`).join(" · ")}</small>
+      </div>)}</div>
+      {unit.interlayers.length > 0 && <p><strong>Interlayers:</strong> {unit.interlayers.map((layer) => `Gap ${layer.gapNumber}, sheet ${layer.sheetNumber}: ${layer.material.name}, ${layer.color.name}, ${layer.thickness} in${layer.brand ? ` (${layer.brand})` : ""}`).join(" · ")}</p>}
+      {unit.cavities.length > 0 && <p><strong>Cavities:</strong> {unit.cavities.map((cavity) => `Gap ${cavity.gapNumber}: ${formatInches(cavity.width)}, ${cavity.spacerType.name} (${cavity.spacerColor.name})${cavity.gasFilled ? ", gas-filled" : ""}`).join(" · ")}</p>}
+      {unit.notes && <p><strong>Notes:</strong> {unit.notes}</p>}
+    </div>
   );
 }
 

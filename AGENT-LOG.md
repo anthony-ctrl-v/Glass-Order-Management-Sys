@@ -136,3 +136,16 @@ This file records agent-assisted work and the related user verification for this
   - Keep local PostgreSQL 16 running for development.
   - Use password authentication and a non-publicly accessible database for any shared or deployed environment; the local Homebrew cluster is configured for local development.
   - Continue with milestone 2 after confirming the milestone 1 app workflow.
+
+## Issue #013 — Milestone 2: Glass Products and Specifications
+
+- Date: 2026-11-01
+- Agent: GitHub Copilot
+- Work completed: Implemented milestone 2 on `milestone/02-glass-specifications`. Added relational models and a PostgreSQL migration for categorized glass catalogs, glass units, ordered pane specifications, Side A/Side B surfaces and treatments, sequenced interlayers, and insulating cavities. Added catalog management and glass-unit specification APIs, request validation for construction/pane-gap relationships, and order-item views/editors that show saved specifications. Pane dimensions, thickness, and cavity width display inch fractions while retaining numeric-inch values. After user UI feedback, moved each shaded gap panel between adjacent panes and changed laminated-insulated construction so each gap is exclusively laminated or insulated; all gaps must be assigned, with at least one of each, before saving. Added a Low-E flag to glass-product catalog entries and require each pane using such a product to select Side A or Side B; the API rejects inconsistent catalog edits and pane selections. The user created and assigned GitHub issues #5–#9 to the “Glass Products and Specifications” milestone.
+- Files changed: `README.md`, `AGENT-LOG.md`, `apps/api/prisma/schema.prisma`, the new glass-specification and Low-E migrations, API modules/tests, and `apps/web/src` catalog, order-detail, and editor files. The GitHub Wiki `Log.md` was updated.
+- Tests or checks run: Prisma client generation and formatting; API and web production builds; `npm test` (19 passing tests, including Low-E orientation and gap exclusivity/completion requirements); applied the Low-E migration to local PostgreSQL; exercised Low-E product creation and glass-unit create/read through the API against PostgreSQL, confirming missing orientation is rejected and Side B is persisted; removed all temporary test records; inspected the browser catalog form's Low-E checkbox; `git diff --check`.
+- User verification: The implementation remains on the feature branch and has not been pushed or merged. No production tracking or per-pane checklist behavior was added.
+- Follow-up:
+  - Review the local milestone 2 workflows and test results.
+  - Push the feature branch and open a pull request referencing issues #5–#9 after the user is ready for that workflow step.
+  - Merge to `main` and close the milestone issues only after review and approval.

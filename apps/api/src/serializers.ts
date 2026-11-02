@@ -1,7 +1,11 @@
 import { Prisma } from "@prisma/client";
+import { glassUnitInclude, serializeUnit } from "./glass-specifications.js";
 
 type OrderWithItems = Prisma.OrderGetPayload<{
-  include: { items: true; customer: true };
+  include: {
+    items: { include: { glassUnit: { include: typeof glassUnitInclude } } };
+    customer: true;
+  };
 }>;
 
 export function serializeOrder(order: OrderWithItems) {
@@ -9,6 +13,7 @@ export function serializeOrder(order: OrderWithItems) {
     ...item,
     unitPrice: item.unitPrice.toFixed(2),
     lineTotal: item.unitPrice.mul(item.quantity).toFixed(2),
+    glassUnit: item.glassUnit ? serializeUnit(item.glassUnit) : null,
   }));
   const total = order.items.reduce(
     (sum, item) => sum.add(item.unitPrice.mul(item.quantity)),
