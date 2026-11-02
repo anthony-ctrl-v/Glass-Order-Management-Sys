@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  DRAFT
+  OPEN
+  CANCELLED
+}
+
+model Customer {
+  id                      String           @id @default(cuid())
+  legalName               String
+  phone                   String?
+  email                   String?
+  billingAddressLine1     String?
+  billingAddressLine2     String?
+  billingCity             String?
+  billingRegion           String?
+  billingPostalCode       String?
+  billingCountry          String?
+  shippingAddressLine1    String?
+  shippingAddressLine2    String?
+  shippingCity            String?
+  shippingRegion          String?
+  shippingPostalCode      String?
+  shippingCountry         String?
+  contact                 CustomerContact?
+  orders                  Order[]
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  @@index([legalName])
+}
+
+model CustomerContact {
+  id         String   @id @default(cuid())
+  customerId String   @unique
+  name       String
+  phone      String?
+  email      String?
+  role       String?
+  notes      String?
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Order {
+  id                     String      @id @default(cuid())
+  orderNumber            Int         @unique @default(autoincrement())
+  customerId             String
+  dueDate                DateTime?    @db.Date
+  status                 OrderStatus @default(OPEN)
+  billingAddressLine1    String?
+  billingAddressLine2    String?
+  billingCity            String?
+  billingRegion          String?
+  billingPostalCode      String?
+  billingCountry         String?
+  shippingAddressLine1   String?
+  shippingAddressLine2   String?
+  shippingCity           String?
+  shippingRegion         String?
+  shippingPostalCode     String?
+  shippingCountry        String?
+  shippingContactName    String?
+  shippingContactPhone   String?
+  shippingContactEmail   String?
+  customer               Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items                  OrderItem[]
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@index([customerId, createdAt])
+  @@index([status, dueDate])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  lineNumber  Int
+  description String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([orderId, lineNumber])
+  @@index([orderId])
+}

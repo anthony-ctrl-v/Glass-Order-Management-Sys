@@ -8,7 +8,7 @@ This senior-design project will explore and build a web-based system for managin
 
 Glass-manufacturing orders can require many specifications, production steps, deadlines, and status updates. When this information is scattered across manual records or disconnected tools, it can be difficult to track order progress, communicate changes, and maintain an accurate view of work. This project aims to provide a centralized workflow for organizing that information.
 
-## Planned Core Features
+## Core Features
 
 - Customer and contact management
 - Order creation with glass specifications and measurements
@@ -19,30 +19,32 @@ Glass-manufacturing orders can require many specifications, production steps, de
 - Role-based access for system users
 - Reports or dashboard views for operational status
 
-These features are planned and may change as requirements are refined.
+Implementation is being delivered in four milestones. The first milestone covers customers, their default contact, orders, and order items. Production tracking and fulfillment features will follow.
 
-## Planned Technology Stack
+## Technology Stack
 
 - Frontend: React with TypeScript
 - Backend: Node.js with Express and TypeScript
 - Database: PostgreSQL
+- Database toolkit: Prisma ORM and migrations
 - API: RESTful HTTP API
 - Version control: Git and GitHub
-- Testing and deployment tools: To be selected during project planning
-
-The stack is provisional and should be confirmed before implementation begins.
 
 ## Development Status
 
-Initial project setup. The repository currently contains project documentation only; application development has not started.
+Milestone 1 is implemented: customer/contact management, order entry, order items, address/contact snapshots, pricing, and order lifecycle status. Glass specifications and production tracking are planned for later milestones.
 
 ## Basic Local Setup
 
 1. Clone the repository.
-2. Create a feature branch for your work.
-3. Review `AGENTS.md` and the project [GitHub Wiki](https://github.com/anthony-ctrl-v/Glass-Order-Management-Sys/wiki) before making changes.
-4. Install the project dependencies once the application manifests are added.
-5. Configure local environment variables using a future example environment file. Do not commit secrets or tokens.
-6. Start the development server using the project command documented here once implementation begins.
+2. Install Node.js 20.19+ and PostgreSQL 16+.
+3. Run `npm install`.
+4. Create an empty PostgreSQL database named `glass_orders`.
+5. Copy `apps/api/.env.example` to `apps/api/.env` and set `DATABASE_URL` to your local PostgreSQL database.
+6. Run `npm run db:migrate` to create the database tables.
+7. Run `npm run dev`, then open the frontend at <http://localhost:5173>.
+
+The API runs at <http://localhost:3001>; Vite proxies `/api` requests to it during development.
+Do not commit `.env` files or credentials.
 
 For current project activity and verification notes, see `AGENT-LOG.md`.

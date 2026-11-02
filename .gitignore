@@ -9,3 +9,14 @@ paper/*.out
 paper/*.pdf
 paper/*.synctex.gz
 paper/*.toc
+
+# JavaScript dependencies and build output
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Local environment files
+.env
+.env.*
+!.env.example

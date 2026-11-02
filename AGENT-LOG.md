@@ -111,3 +111,16 @@ This file records agent-assisted work and the related user verification for this
 - Follow-up:
   - Implement the confirmed baseline in the existing application after inspecting its current architecture and database conventions.
   - Define and implement order completion, backorders, packing/shipping, shipped status, and notification recipients in later work.
+
+## Issue #011 — Milestone 1: Customers and Orders
+
+- Date: 2026-11-01
+- Agent: GitHub Copilot
+- Work completed: Implemented the first agreed milestone using React/TypeScript, Express/TypeScript, PostgreSQL, and Prisma. Added customer and one-to-one default-contact records, order and order-item records, order-specific billing/shipping address and shipping-contact snapshots, generated order numbers and stable line numbers, saved two-decimal unit prices, and calculated line/order totals. Added customer create/edit, order creation, order status changes, and responsive dashboard screens.
+- Files changed: `README.md`, `.gitignore`, root/npm workspace manifests, and `apps/api` and `apps/web` application files including the Prisma schema and initial PostgreSQL migration.
+- Tests or checks run: `npm run build`; `npm test` (5 passing tests); Prisma schema validation; initial migration diff reviewed against the schema; `npm audit` (0 vulnerabilities); `git diff --check`; API health and frontend HTTP smoke checks; mocked browser flow for creating an order and displaying its calculated total.
+- User verification: Not yet performed.
+- Follow-up:
+  - Apply the migration and run database-backed customer/order CRUD verification in an environment with PostgreSQL configured. This environment has no PostgreSQL server, `psql`, Docker, or `DATABASE_URL`, so live database integration could not be exercised here.
+  - Continue with milestone 2 for glass products and specifications after milestone 1 is merged.
+  - Keep physical pane/unit tracking, production workflow, staff access, and deferred fulfillment features in their planned later milestones.
