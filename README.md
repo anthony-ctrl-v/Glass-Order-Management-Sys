@@ -11,7 +11,9 @@ Glass-manufacturing orders can require many specifications, production steps, de
 ## Core Features
 
 - Customer and contact management
-- Order creation with glass specifications and measurements
+- Order entry with structured glass-unit specifications and measurements
+- Editable glass-product, treatment, interlayer, and spacer catalogs
+- Ordered pane specifications, two treated surfaces per pane, and interlayer/cavity details for each pane gap
 - Order status and production-stage tracking
 - Scheduling and assignment of production work
 - Searchable order history
@@ -19,7 +21,7 @@ Glass-manufacturing orders can require many specifications, production steps, de
 - Role-based access for system users
 - Reports or dashboard views for operational status
 
-Implementation is being delivered in four milestones. The first milestone covers customers, their default contact, orders, and order items. Production tracking and fulfillment features will follow.
+Implementation is being delivered in four milestones. Milestone 1 covers customers, their default contact, orders, and order items. Milestone 2 adds editable glass specification catalogs and structured glass-unit specifications on order items. Physical pane tracking, production checklists, and fulfillment features will follow in later milestones.
 
 ## Technology Stack
 
@@ -32,7 +34,7 @@ Implementation is being delivered in four milestones. The first milestone covers
 
 ## Development Status
 
-Milestone 1 is implemented: customer/contact management, order entry, order items, address/contact snapshots, pricing, and order lifecycle status. Glass specifications and production tracking are planned for later milestones.
+Milestone 1 is implemented: customer/contact management, order entry, order items, address/contact snapshots, pricing, and order lifecycle status. Milestone 2 is implemented on the `milestone/02-glass-specifications` branch and is being tested before its pull request: glass catalogs, pane and surface specifications, interlayers, insulating cavities, and order-item specification views. Physical pane tracking and production workflows remain planned for later milestones.
 
 ## Basic Local Setup
 

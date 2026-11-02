@@ -3,6 +3,7 @@ import express, { type ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 import { customersRouter } from "./customers.js";
 import { NotFoundError } from "./errors.js";
+import { glassCatalogRouter, glassSpecificationsRouter } from "./glass-specifications.js";
 import { ordersRouter } from "./orders.js";
 
 export const app = express();
@@ -15,6 +16,8 @@ app.get("/api/health", (_request, response) => {
 });
 app.use("/api/customers", customersRouter);
 app.use("/api/orders", ordersRouter);
+app.use("/api/glass-catalogs", glassCatalogRouter);
+app.use("/api/order-items", glassSpecificationsRouter);
 
 const errorHandler: ErrorRequestHandler = (error: unknown, _request, response, _next) => {
   if (error instanceof NotFoundError) {

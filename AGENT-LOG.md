@@ -136,3 +136,16 @@ This file records agent-assisted work and the related user verification for this
   - Keep local PostgreSQL 16 running for development.
   - Use password authentication and a non-publicly accessible database for any shared or deployed environment; the local Homebrew cluster is configured for local development.
   - Continue with milestone 2 after confirming the milestone 1 app workflow.
+
+## Issue #013 — Milestone 2: Glass Products and Specifications
+
+- Date: 2026-11-01
+- Agent: GitHub Copilot
+- Work completed: Implemented milestone 2 on `milestone/02-glass-specifications`. Added relational models and a PostgreSQL migration for categorized glass catalogs, glass units, ordered pane specifications, Side A/Side B surfaces and treatments, sequenced interlayers, and insulating cavities. Added catalog management and glass-unit specification APIs, request validation for construction/pane-gap relationships, and order-item views/editors that show saved specifications. Pane dimensions, thickness, and cavity width display inch fractions while retaining numeric-inch values. The user created and assigned GitHub issues #5–#9 to the “Glass Products and Specifications” milestone.
+- Files changed: `README.md`, `AGENT-LOG.md`, `apps/api/prisma/schema.prisma`, the new glass-specification migration and API modules/tests, and `apps/web/src` catalog, order-detail, and editor files. The GitHub Wiki `Log.md` was updated.
+- Tests or checks run: Prisma client generation and formatting; API and web production builds; `npm test` (11 passing tests); applied the new migration to local PostgreSQL; exercised catalog and glass-unit create/update/read through the API against PostgreSQL, including panes, surface treatments, interlayers, and cavities; removed all temporary test records; checked the browser order/catalog views; `git diff --check`.
+- User verification: The implementation remains on the feature branch and has not been pushed or merged. No production tracking or per-pane checklist behavior was added.
+- Follow-up:
+  - Review the local milestone 2 workflows and test results.
+  - Push the feature branch and open a pull request referencing issues #5–#9 after the user is ready for that workflow step.
+  - Merge to `main` and close the milestone issues only after review and approval.

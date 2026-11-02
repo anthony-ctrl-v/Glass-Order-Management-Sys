@@ -12,27 +12,54 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum CatalogKind {
+  GLASS_PRODUCT
+  SURFACE_TREATMENT
+  INTERLAYER_MATERIAL
+  INTERLAYER_COLOR
+  SPACER_TYPE
+  SPACER_COLOR
+}
+
+enum GlassUnitConstruction {
+  MONOLITHIC
+  INSULATED
+  LAMINATED
+  LAMINATED_INSULATED
+}
+
+enum PaneHeatTreatment {
+  NONE
+  TEMPERED
+  HEAT_STRENGTHENED
+}
+
+enum SurfaceSide {
+  A
+  B
+}
+
 model Customer {
-  id                      String           @id @default(cuid())
-  legalName               String
-  phone                   String?
-  email                   String?
-  billingAddressLine1     String?
-  billingAddressLine2     String?
-  billingCity             String?
-  billingRegion           String?
-  billingPostalCode       String?
-  billingCountry          String?
-  shippingAddressLine1    String?
-  shippingAddressLine2    String?
-  shippingCity            String?
-  shippingRegion          String?
-  shippingPostalCode      String?
-  shippingCountry         String?
-  contact                 CustomerContact?
-  orders                  Order[]
-  createdAt               DateTime         @default(now())
-  updatedAt               DateTime         @updatedAt
+  id                   String           @id @default(cuid())
+  legalName            String
+  phone                String?
+  email                String?
+  billingAddressLine1  String?
+  billingAddressLine2  String?
+  billingCity          String?
+  billingRegion        String?
+  billingPostalCode    String?
+  billingCountry       String?
+  shippingAddressLine1 String?
+  shippingAddressLine2 String?
+  shippingCity         String?
+  shippingRegion       String?
+  shippingPostalCode   String?
+  shippingCountry      String?
+  contact              CustomerContact?
+  orders               Order[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   @@index([legalName])
 }
@@ -51,46 +78,172 @@ model CustomerContact {
 }
 
 model Order {
-  id                     String      @id @default(cuid())
-  orderNumber            Int         @unique @default(autoincrement())
-  customerId             String
-  dueDate                DateTime?    @db.Date
-  status                 OrderStatus @default(OPEN)
-  billingAddressLine1    String?
-  billingAddressLine2    String?
-  billingCity            String?
-  billingRegion          String?
-  billingPostalCode      String?
-  billingCountry         String?
-  shippingAddressLine1   String?
-  shippingAddressLine2   String?
-  shippingCity           String?
-  shippingRegion         String?
-  shippingPostalCode     String?
-  shippingCountry        String?
-  shippingContactName    String?
-  shippingContactPhone   String?
-  shippingContactEmail   String?
-  customer               Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  items                  OrderItem[]
-  createdAt              DateTime    @default(now())
-  updatedAt              DateTime    @updatedAt
+  id                   String      @id @default(cuid())
+  orderNumber          Int         @unique @default(autoincrement())
+  customerId           String
+  dueDate              DateTime?   @db.Date
+  status               OrderStatus @default(OPEN)
+  billingAddressLine1  String?
+  billingAddressLine2  String?
+  billingCity          String?
+  billingRegion        String?
+  billingPostalCode    String?
+  billingCountry       String?
+  shippingAddressLine1 String?
+  shippingAddressLine2 String?
+  shippingCity         String?
+  shippingRegion       String?
+  shippingPostalCode   String?
+  shippingCountry      String?
+  shippingContactName  String?
+  shippingContactPhone String?
+  shippingContactEmail String?
+  customer             Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items                OrderItem[]
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 
   @@index([customerId, createdAt])
   @@index([status, dueDate])
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   orderId     String
   lineNumber  Int
   description String
   quantity    Int
-  unitPrice   Decimal  @db.Decimal(12, 2)
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  unitPrice   Decimal    @db.Decimal(12, 2)
+  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  glassUnit   GlassUnit?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@unique([orderId, lineNumber])
   @@index([orderId])
+}
+
+model GlassCatalogEntry {
+  id                   String                 @id @default(cuid())
+  kind                 CatalogKind
+  name                 String
+  manufacturer         String?
+  description          String?
+  facilityWorkRequired Boolean                @default(false)
+  active               Boolean                @default(true)
+  paneSpecifications   PaneSpecification[]    @relation("PaneGlassProduct")
+  surfaceTreatments    PaneSurfaceTreatment[]
+  interlayerMaterials  GlassInterlayer[]      @relation("InterlayerMaterial")
+  interlayerColors     GlassInterlayer[]      @relation("InterlayerColor")
+  spacerTypes          InsulatingCavity[]     @relation("SpacerType")
+  spacerColors         InsulatingCavity[]     @relation("SpacerColor")
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@unique([kind, name])
+  @@index([kind, active, name])
+}
+
+model GlassUnit {
+  id            String                @id @default(cuid())
+  orderItemId   String                @unique
+  overallWidth  Decimal               @db.Decimal(10, 4)
+  overallHeight Decimal               @db.Decimal(10, 4)
+  construction  GlassUnitConstruction
+  notes         String?
+  orderItem     OrderItem             @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  panes         PaneSpecification[]
+  interlayers   GlassInterlayer[]
+  cavities      InsulatingCavity[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+model PaneSpecification {
+  id               String             @id @default(cuid())
+  glassUnitId      String
+  position         Int
+  glassProductId   String
+  width            Decimal            @db.Decimal(10, 4)
+  height           Decimal            @db.Decimal(10, 4)
+  thickness        Decimal            @db.Decimal(10, 4)
+  heatTreatment    PaneHeatTreatment  @default(NONE)
+  hasHoles         Boolean            @default(false)
+  flatPolish       Boolean            @default(false)
+  bevel            Boolean            @default(false)
+  glassUnit        GlassUnit          @relation(fields: [glassUnitId], references: [id], onDelete: Cascade)
+  glassProduct     GlassCatalogEntry  @relation("PaneGlassProduct", fields: [glassProductId], references: [id], onDelete: Restrict)
+  surfaces         PaneSurface[]
+  leftInterlayers  GlassInterlayer[]  @relation("InterlayerLeftPane")
+  rightInterlayers GlassInterlayer[]  @relation("InterlayerRightPane")
+  leftCavities     InsulatingCavity[] @relation("CavityLeftPane")
+  rightCavities    InsulatingCavity[] @relation("CavityRightPane")
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@unique([glassUnitId, position])
+  @@index([glassProductId])
+}
+
+model PaneSurface {
+  id         String                 @id @default(cuid())
+  paneId     String
+  side       SurfaceSide
+  pane       PaneSpecification      @relation(fields: [paneId], references: [id], onDelete: Cascade)
+  treatments PaneSurfaceTreatment[]
+
+  @@unique([paneId, side])
+}
+
+model PaneSurfaceTreatment {
+  id          String            @id @default(cuid())
+  surfaceId   String
+  treatmentId String
+  sequence    Int
+  surface     PaneSurface       @relation(fields: [surfaceId], references: [id], onDelete: Cascade)
+  treatment   GlassCatalogEntry @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
+
+  @@unique([surfaceId, sequence])
+  @@index([treatmentId])
+}
+
+model GlassInterlayer {
+  id          String            @id @default(cuid())
+  glassUnitId String
+  gapNumber   Int
+  sheetNumber Int
+  leftPaneId  String
+  rightPaneId String
+  materialId  String
+  colorId     String
+  thickness   Decimal           @db.Decimal(10, 4)
+  brand       String?
+  glassUnit   GlassUnit         @relation(fields: [glassUnitId], references: [id], onDelete: Cascade)
+  leftPane    PaneSpecification @relation("InterlayerLeftPane", fields: [leftPaneId], references: [id], onDelete: Cascade)
+  rightPane   PaneSpecification @relation("InterlayerRightPane", fields: [rightPaneId], references: [id], onDelete: Cascade)
+  material    GlassCatalogEntry @relation("InterlayerMaterial", fields: [materialId], references: [id], onDelete: Restrict)
+  color       GlassCatalogEntry @relation("InterlayerColor", fields: [colorId], references: [id], onDelete: Restrict)
+
+  @@unique([glassUnitId, gapNumber, sheetNumber])
+  @@index([leftPaneId, rightPaneId])
+}
+
+model InsulatingCavity {
+  id            String            @id @default(cuid())
+  glassUnitId   String
+  gapNumber     Int
+  leftPaneId    String
+  rightPaneId   String
+  spacerTypeId  String
+  spacerColorId String
+  width         Decimal           @db.Decimal(10, 4)
+  gasFilled     Boolean           @default(false)
+  glassUnit     GlassUnit         @relation(fields: [glassUnitId], references: [id], onDelete: Cascade)
+  leftPane      PaneSpecification @relation("CavityLeftPane", fields: [leftPaneId], references: [id], onDelete: Cascade)
+  rightPane     PaneSpecification @relation("CavityRightPane", fields: [rightPaneId], references: [id], onDelete: Cascade)
+  spacerType    GlassCatalogEntry @relation("SpacerType", fields: [spacerTypeId], references: [id], onDelete: Restrict)
+  spacerColor   GlassCatalogEntry @relation("SpacerColor", fields: [spacerColorId], references: [id], onDelete: Restrict)
+
+  @@unique([glassUnitId, gapNumber])
+  @@index([leftPaneId, rightPaneId])
 }

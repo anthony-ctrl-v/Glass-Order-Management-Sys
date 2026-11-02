@@ -2,12 +2,16 @@ import { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { prisma } from "./db.js";
 import { NotFoundError } from "./errors.js";
+import { glassUnitInclude } from "./glass-specifications.js";
 import { serializeOrder } from "./serializers.js";
 import { createOrderSchema, updateOrderSchema } from "./validation.js";
 
 export const ordersRouter = Router();
 
-const orderInclude = { items: { orderBy: { lineNumber: "asc" } }, customer: true } as const;
+const orderInclude = {
+  items: { orderBy: { lineNumber: "asc" as const }, include: { glassUnit: { include: glassUnitInclude } } },
+  customer: true,
+} as const;
 
 ordersRouter.get("/", async (_request, response, next) => {
   try {
