@@ -3,7 +3,12 @@ import { z } from "zod";
 import { CatalogKind, Prisma } from "@prisma/client";
 import { prisma } from "./db.js";
 import { NotFoundError } from "./errors.js";
-import { glassCatalogSchema, glassUnitSchema } from "./glass-validation.js";
+import {
+  glassCatalogSchema,
+  glassUnitSchema,
+  updateGlassCatalogSchema,
+  validateLowESideSelections,
+} from "./glass-validation.js";
 
 export const glassCatalogRouter = Router();
 export const glassSpecificationsRouter = Router();
@@ -31,7 +36,7 @@ glassCatalogRouter.post("/", async (request, response, next) => {
 
 glassCatalogRouter.patch("/:id", async (request, response, next) => {
   try {
-    const input = glassCatalogSchema.partial().parse(request.body);
+    const input = updateGlassCatalogSchema.parse(request.body);
     const existing = await prisma.glassCatalogEntry.findUnique({ where: { id: request.params.id } });
     if (!existing) throw new NotFoundError("Glass catalog entry not found.");
     if (input.kind !== undefined && input.kind !== existing.kind) {
@@ -39,6 +44,16 @@ glassCatalogRouter.patch("/:id", async (request, response, next) => {
         code: "custom",
         path: ["kind"],
         message: "A catalog entry's category cannot be changed after it is created.",
+      }]);
+    }
+    if (
+      (input.kind ?? existing.kind) !== CatalogKind.GLASS_PRODUCT
+      && (input.hasLowESide ?? existing.hasLowESide)
+    ) {
+      throw new z.ZodError([{
+        code: "custom",
+        path: ["hasLowESide"],
+        message: "Only glass products can have a Low-E side.",
       }]);
     }
     const entry = await prisma.glassCatalogEntry.update({
@@ -146,9 +161,14 @@ glassSpecificationsRouter.put("/:orderItemId/glass-unit", async (request, respon
     ];
     const catalogEntries = await prisma.glassCatalogEntry.findMany({
       where: { id: { in: [...new Set(requestedCatalogEntries.map((entry) => entry.id))] } },
-      select: { id: true, kind: true },
+      select: { id: true, kind: true, hasLowESide: true },
     });
     const kindsById = new Map(catalogEntries.map((entry) => [entry.id, entry.kind]));
+    const productsById = new Map(catalogEntries
+      .filter((entry) => entry.kind === CatalogKind.GLASS_PRODUCT)
+      .map((entry) => [entry.id, { hasLowESide: entry.hasLowESide }]));
+    const lowESideIssues = validateLowESideSelections(input.panes, productsById);
+    if (lowESideIssues.length > 0) throw new z.ZodError(lowESideIssues);
     for (const requested of requestedCatalogEntries) {
       if (kindsById.get(requested.id) !== requested.kind) {
         throw new z.ZodError([{
@@ -175,6 +195,7 @@ glassSpecificationsRouter.put("/:orderItemId/glass-unit", async (request, respon
               width: new Prisma.Decimal(pane.width),
               height: new Prisma.Decimal(pane.height),
               thickness: new Prisma.Decimal(pane.thickness),
+              lowESide: pane.lowESide,
               heatTreatment: pane.heatTreatment,
               hasHoles: pane.hasHoles,
               flatPolish: pane.flatPolish,

@@ -30,6 +30,7 @@ export function GlassCatalogManager({ entries, onChanged }: Props) {
   const [name, setName] = useState("");
   const [manufacturer, setManufacturer] = useState("");
   const [description, setDescription] = useState("");
+  const [hasLowESide, setHasLowESide] = useState(false);
   const [facilityWorkRequired, setFacilityWorkRequired] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -42,6 +43,7 @@ export function GlassCatalogManager({ entries, onChanged }: Props) {
     setName(entry.name);
     setManufacturer(entry.manufacturer ?? "");
     setDescription(entry.description ?? "");
+    setHasLowESide(entry.hasLowESide);
     setFacilityWorkRequired(entry.facilityWorkRequired);
     setError("");
     setNotice("");
@@ -52,6 +54,7 @@ export function GlassCatalogManager({ entries, onChanged }: Props) {
     setName("");
     setManufacturer("");
     setDescription("");
+    setHasLowESide(false);
     setFacilityWorkRequired(false);
   }
 
@@ -65,6 +68,7 @@ export function GlassCatalogManager({ entries, onChanged }: Props) {
       name,
       manufacturer: manufacturer || null,
       description: description || null,
+      hasLowESide: kind === "GLASS_PRODUCT" && hasLowESide,
       facilityWorkRequired: kind === "SURFACE_TREATMENT" && facilityWorkRequired,
       active: editingId ? entries.find((entry) => entry.id === editingId)?.active ?? true : true,
     };
@@ -107,6 +111,7 @@ export function GlassCatalogManager({ entries, onChanged }: Props) {
           <label>Catalog<select value={kind} disabled={Boolean(editingId)} onChange={(event) => setKind(event.target.value as GlassCatalogKind)}>{catalogKinds.map((value) => <option value={value} key={value}>{catalogLabels[value]}</option>)}</select></label>
           <label>Name<input required maxLength={200} value={name} onChange={(event) => setName(event.target.value)} /></label>
           {kind === "GLASS_PRODUCT" && <label>Manufacturer <span className="optional">optional</span><input maxLength={200} value={manufacturer} onChange={(event) => setManufacturer(event.target.value)} /></label>}
+          {kind === "GLASS_PRODUCT" && <label className="checkbox-label"><input type="checkbox" checked={hasLowESide} onChange={(event) => setHasLowESide(event.target.checked)} /> Product has a Low-E side</label>}
           <label>Description <span className="optional">optional</span><input maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
           {kind === "SURFACE_TREATMENT" && <label className="checkbox-label"><input type="checkbox" checked={facilityWorkRequired} onChange={(event) => setFacilityWorkRequired(event.target.checked)} /> Requires facility work</label>}
           <button className="primary-button" disabled={saving}>{saving ? "Saving…" : editingId ? "Update entry" : "Add entry"}<span>→</span></button>
@@ -122,7 +127,7 @@ export function GlassCatalogManager({ entries, onChanged }: Props) {
             {group.length === 0 ? <p className="muted">No entries yet.</p> : <ul className="customer-list">
               {group.map((entry) => <li key={entry.id}>
                 <span className={`catalog-status ${entry.active ? "active" : ""}`}>{entry.active ? "Active" : "Inactive"}</span>
-                <span className="customer-info"><strong>{entry.name}</strong><small>{entry.manufacturer ?? entry.description ?? (entry.facilityWorkRequired ? "Requires facility work" : "—")}</small></span>
+                <span className="customer-info"><strong>{entry.name}</strong><small>{[entry.manufacturer, entry.description, entry.hasLowESide ? "Has Low-E side" : null, entry.facilityWorkRequired ? "Requires facility work" : null].filter(Boolean).join(" · ") || "—"}</small></span>
                 <button className="edit-button" type="button" onClick={() => edit(entry)}>Edit</button>
                 <button className="edit-button" type="button" onClick={() => void toggleActive(entry)}>{entry.active ? "Deactivate" : "Reactivate"}</button>
               </li>)}

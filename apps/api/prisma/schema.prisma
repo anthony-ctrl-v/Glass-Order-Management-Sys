@@ -129,6 +129,7 @@ model GlassCatalogEntry {
   name                 String
   manufacturer         String?
   description          String?
+  hasLowESide          Boolean                @default(false)
   facilityWorkRequired Boolean                @default(false)
   active               Boolean                @default(true)
   paneSpecifications   PaneSpecification[]    @relation("PaneGlassProduct")
@@ -167,6 +168,7 @@ model PaneSpecification {
   width            Decimal            @db.Decimal(10, 4)
   height           Decimal            @db.Decimal(10, 4)
   thickness        Decimal            @db.Decimal(10, 4)
+  lowESide         SurfaceSide?
   heatTreatment    PaneHeatTreatment  @default(NONE)
   hasHoles         Boolean            @default(false)
   flatPolish       Boolean            @default(false)

@@ -29,6 +29,7 @@ function newPane(catalogs: GlassCatalogEntry[]): GlassUnitInput["panes"][number]
     width: 12,
     height: 12,
     thickness: 0.25,
+    lowESide: null,
     heatTreatment: "NONE",
     hasHoles: false,
     flatPolish: false,
@@ -60,6 +61,7 @@ function draftFromUnit(unit: GlassUnit): GlassUnitInput {
       width: Number(pane.width),
       height: Number(pane.height),
       thickness: Number(pane.thickness),
+      lowESide: pane.glassProduct.hasLowESide ? pane.lowESide : null,
       heatTreatment: pane.heatTreatment,
       hasHoles: pane.hasHoles,
       flatPolish: pane.flatPolish,
@@ -177,6 +179,11 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
       ...current,
       panes: current.panes.map((pane, paneIndex) => paneIndex === index ? { ...pane, ...patch } : pane),
     }));
+  }
+
+  function setPaneGlassProduct(index: number, glassProductId: string) {
+    const product = catalogs.find((entry) => entry.id === glassProductId);
+    updatePane(index, { glassProductId, lowESide: product?.hasLowESide ? draft.panes[index]?.lowESide ?? null : null });
   }
 
   function updateInterlayer(index: number, patch: Partial<GlassUnitInput["interlayers"][number]>) {
@@ -315,7 +322,12 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
         <Fragment key={paneIndex}>
         <section className="pane-editor">
           <div className="line-title">Pane {paneIndex + 1} {paneIndex === 0 ? "(exterior)" : paneIndex === draft.panes.length - 1 ? "(interior)" : ""}{paneIndex === draft.panes.length - 1 && draft.panes.length > 2 && <button className="remove-button" type="button" aria-label="Remove last pane" onClick={() => setDraft((current) => resizeForConstruction(current, current.construction, current.panes.length - 1, catalogs))}>×</button>}</div>
-          <label>Glass product<CatalogSelect catalogs={catalogs} kind="GLASS_PRODUCT" value={pane.glassProductId} onChange={(value) => updatePane(paneIndex, { glassProductId: value })} /></label>
+          <label>Glass product<CatalogSelect catalogs={catalogs} kind="GLASS_PRODUCT" value={pane.glassProductId} onChange={(value) => setPaneGlassProduct(paneIndex, value)} /></label>
+          {catalogs.find((entry) => entry.id === pane.glassProductId)?.hasLowESide && <label>Low-E side on this pane
+            <select required value={pane.lowESide ?? ""} onChange={(event) => updatePane(paneIndex, { lowESide: event.target.value ? event.target.value as "A" | "B" : null })}>
+              <option value="">Select the Low-E surface</option><option value="A">Side A · exterior-facing</option><option value="B">Side B · interior-facing</option>
+            </select>
+          </label>}
           <div className="line-fields">
             <label>Width (in)<input required type="number" min="0.0001" step="0.0001" value={pane.width} onChange={(event) => updatePane(paneIndex, { width: Number(event.target.value) })} /><small className="measurement-hint">{formatInches(pane.width)}</small></label>
             <label>Height (in)<input required type="number" min="0.0001" step="0.0001" value={pane.height} onChange={(event) => updatePane(paneIndex, { height: Number(event.target.value) })} /><small className="measurement-hint">{formatInches(pane.height)}</small></label>

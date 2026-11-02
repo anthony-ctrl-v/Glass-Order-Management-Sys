@@ -13,7 +13,7 @@ Glass-manufacturing orders can require many specifications, production steps, de
 - Customer and contact management
 - Order entry with structured glass-unit specifications and measurements
 - Editable glass-product, treatment, interlayer, and spacer catalogs
-- Ordered pane specifications, two treated surfaces per pane, and a distinct lamination or insulating-cavity selection for each pane gap
+- Ordered pane specifications, optional Low-E surface orientation per pane, two treated surfaces per pane, and a distinct lamination or insulating-cavity selection for each pane gap
 - Order status and production-stage tracking
 - Scheduling and assignment of production work
 - Searchable order history
@@ -34,7 +34,7 @@ Implementation is being delivered in four milestones. Milestone 1 covers custome
 
 ## Development Status
 
-Milestone 1 is implemented: customer/contact management, order entry, order items, address/contact snapshots, pricing, and order lifecycle status. Milestone 2 is implemented on the `milestone/02-glass-specifications` branch and is being tested before its pull request: glass catalogs, pane and surface specifications, interlayers, insulating cavities, and order-item specification views. Physical pane tracking and production workflows remain planned for later milestones.
+Milestone 1 is implemented: customer/contact management, order entry, order items, address/contact snapshots, pricing, and order lifecycle status. Milestone 2 is implemented on the `milestone/02-glass-specifications` branch and is being tested before its pull request: glass catalogs, pane and surface specifications, per-product Low-E support with required Side A/Side B orientation, interlayers, insulating cavities, and order-item specification views. Physical pane tracking and production workflows remain planned for later milestones.
 
 ## Basic Local Setup
 

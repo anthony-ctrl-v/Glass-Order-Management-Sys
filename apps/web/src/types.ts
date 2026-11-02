@@ -59,6 +59,7 @@ export type GlassCatalogEntry = {
   name: string;
   manufacturer: string | null;
   description: string | null;
+  hasLowESide: boolean;
   facilityWorkRequired: boolean;
   active: boolean;
 };
@@ -74,6 +75,7 @@ export type GlassUnit = {
     position: number;
     glassProductId: string;
     glassProduct: GlassCatalogEntry;
+    lowESide: "A" | "B" | null;
     width: string;
     height: string;
     thickness: string;
@@ -120,6 +122,7 @@ export type GlassUnitInput = {
     width: number;
     height: number;
     thickness: number;
+    lowESide: GlassUnit["panes"][number]["lowESide"];
     heatTreatment: GlassUnit["panes"][number]["heatTreatment"];
     hasHoles: boolean;
     flatPolish: boolean;

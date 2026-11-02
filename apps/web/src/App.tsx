@@ -430,6 +430,7 @@ function GlassUnitSummary({ unit }: { unit: GlassUnit }) {
       <div className="pane-summary-list">{unit.panes.map((pane) => <div key={pane.id}>
         <strong>Pane {pane.position}: {pane.glassProduct.name}</strong>
         <span>{formatInches(pane.width)} × {formatInches(pane.height)} × {formatInches(pane.thickness)} · {pane.heatTreatment.toLowerCase().replaceAll("_", " ")}{pane.hasHoles ? " · holes" : ""}{pane.flatPolish ? " · flat polish" : ""}{pane.bevel ? " · bevel" : ""}</span>
+        {pane.glassProduct.hasLowESide && <small>Low-E side: {pane.lowESide ? `Side ${pane.lowESide}` : "not specified"}</small>}
         <small>{pane.surfaces.map((surface) => `Surface ${pane.position * 2 - (surface.side === "A" ? 1 : 0)} (${surface.side}): ${surface.treatments.map((treatment) => treatment.treatment.name).join(", ") || "no treatments"}`).join(" · ")}</small>
       </div>)}</div>
       {unit.interlayers.length > 0 && <p><strong>Interlayers:</strong> {unit.interlayers.map((layer) => `Gap ${layer.gapNumber}, sheet ${layer.sheetNumber}: ${layer.material.name}, ${layer.color.name}, ${layer.thickness} in${layer.brand ? ` (${layer.brand})` : ""}`).join(" · ")}</p>}

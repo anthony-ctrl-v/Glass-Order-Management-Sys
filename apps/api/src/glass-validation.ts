@@ -1,13 +1,26 @@
 import { CatalogKind, PaneHeatTreatment, SurfaceSide } from "@prisma/client";
 import { z } from "zod";
 
-export const glassCatalogSchema = z.object({
+const glassCatalogFieldsSchema = z.object({
   kind: z.nativeEnum(CatalogKind),
   name: z.string().trim().min(1).max(200),
   manufacturer: z.string().trim().max(200).optional().nullable(),
   description: z.string().trim().max(1000).optional().nullable(),
+  hasLowESide: z.boolean().default(false),
   facilityWorkRequired: z.boolean().default(false),
   active: z.boolean().default(true),
+});
+
+export const glassCatalogSchema = glassCatalogFieldsSchema.superRefine((entry, context) => {
+  if (entry.kind !== CatalogKind.GLASS_PRODUCT && entry.hasLowESide) {
+    context.addIssue({ code: "custom", path: ["hasLowESide"], message: "Only glass products can have a Low-E side." });
+  }
+});
+
+export const updateGlassCatalogSchema = glassCatalogFieldsSchema.partial().superRefine((entry, context) => {
+  if (entry.kind !== undefined && entry.kind !== CatalogKind.GLASS_PRODUCT && entry.hasLowESide) {
+    context.addIssue({ code: "custom", path: ["hasLowESide"], message: "Only glass products can have a Low-E side." });
+  }
 });
 
 export const glassUnitSchema = z.object({
@@ -20,6 +33,7 @@ export const glassUnitSchema = z.object({
     width: z.number().positive().max(100_000),
     height: z.number().positive().max(100_000),
     thickness: z.number().positive().max(100),
+    lowESide: z.nativeEnum(SurfaceSide).nullable(),
     heatTreatment: z.nativeEnum(PaneHeatTreatment),
     hasHoles: z.boolean(),
     flatPolish: z.boolean(),
@@ -125,3 +139,28 @@ export const glassUnitSchema = z.object({
     context.addIssue({ code: "custom", path: ["cavities"], message: "Each pane gap can have only one insulating cavity." });
   }
 });
+
+export function validateLowESideSelections(
+  panes: z.infer<typeof glassUnitSchema>["panes"],
+  products: Map<string, { hasLowESide: boolean }>,
+) {
+  const issues: z.ZodIssue[] = [];
+  panes.forEach((pane, index) => {
+    const product = products.get(pane.glassProductId);
+    if (!product) return;
+    if (product.hasLowESide && pane.lowESide === null) {
+      issues.push({
+        code: "custom",
+        path: ["panes", index, "lowESide"],
+        message: "Choose whether the product's Low-E side faces Side A or Side B.",
+      });
+    } else if (!product.hasLowESide && pane.lowESide !== null) {
+      issues.push({
+        code: "custom",
+        path: ["panes", index, "lowESide"],
+        message: "This glass product does not have a Low-E side.",
+      });
+    }
+  });
+  return issues;
+}
