@@ -37,6 +37,8 @@ export const api = {
   orders: () => request<Order[]>("/orders"),
   createOrder: (body: unknown) =>
     request<Order>("/orders", { method: "POST", body: JSON.stringify(body) }),
+  releaseOrder: (id: string) =>
+    request<Order>(`/orders/${id}/release`, { method: "POST" }),
   updateOrder: (id: string, body: unknown) =>
     request<Order>(`/orders/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   updateOrderItem: (orderId: string, itemId: string, body: { quantity: number; unitPrice: string }) =>

@@ -83,6 +83,7 @@ model Order {
   customerId           String
   dueDate              DateTime?   @db.Date
   status               OrderStatus @default(OPEN)
+  releasedAt           DateTime?
   billingAddressLine1  String?
   billingAddressLine2  String?
   billingCity          String?
@@ -128,6 +129,7 @@ model PhysicalGlassUnit {
   id          String         @id @default(cuid())
   orderItemId String
   unitNumber  Int
+  identifier  String         @unique
   orderItem   OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
   panes       PhysicalPane[]
   createdAt   DateTime       @default(now())
@@ -140,6 +142,7 @@ model PhysicalPane {
   physicalUnitId      String
   paneSpecificationId String
   panePosition        Int
+  identifier          String            @unique
   physicalUnit        PhysicalGlassUnit @relation(fields: [physicalUnitId], references: [id], onDelete: Restrict)
   paneSpecification   PaneSpecification @relation(fields: [paneSpecificationId], references: [id], onDelete: Restrict)
   createdAt           DateTime          @default(now())

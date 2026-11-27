@@ -117,6 +117,7 @@ export default function App() {
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const [savingOrderItem, setSavingOrderItem] = useState(false);
+  const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -230,6 +231,25 @@ export default function App() {
       setNotice(`Order ${order.orderNumber} status updated.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not update order status.");
+    }
+  }
+
+  async function releaseOrder(order: Order) {
+    if (order.status !== "OPEN" || order.releasedAt) return;
+    if (!window.confirm(`Release order #${order.orderNumber}? Its details will become read-only.`)) return;
+    setReleasingOrderId(order.id);
+    setError("");
+    setNotice("");
+    setEditingOrderItem(null);
+    setEditingSpecItemId(null);
+    try {
+      await api.releaseOrder(order.id);
+      await refresh();
+      setNotice(`Order #${order.orderNumber} was released.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not release the order.");
+    } finally {
+      setReleasingOrderId(null);
     }
   }
 
@@ -356,22 +376,47 @@ export default function App() {
                           <td>{order.customer.legalName}</td>
                           <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                           <td>{order.dueDate ? new Date(`${order.dueDate}T00:00:00`).toLocaleDateString() : <span className="muted">—</span>}</td>
-                          <td><select className={`status-select ${order.status.toLowerCase()}`} aria-label={`Order ${order.orderNumber} status`} value={order.status} onChange={(event) => void changeOrderStatus(order, event.target.value as Order["status"])}><option value="DRAFT">Draft</option><option value="OPEN">Open</option><option value="CANCELLED">Cancelled</option></select></td>
+                          <td><select className={`status-select ${order.status.toLowerCase()}`} aria-label={`Order ${order.orderNumber} status`} value={order.status} disabled={Boolean(order.releasedAt && order.status === "CANCELLED")} onChange={(event) => void changeOrderStatus(order, event.target.value as Order["status"])}>
+                            {order.releasedAt
+                              ? <><option value="OPEN">Open</option><option value="CANCELLED">Cancelled</option></>
+                              : <><option value="DRAFT">Draft</option><option value="OPEN">Open</option><option value="CANCELLED">Cancelled</option></>}
+                          </select></td>
                           <td className="align-right">{formatCurrency(order.totalPrice)}</td>
                           <td><button className="edit-button" type="button" aria-expanded={expandedOrderId === order.id} onClick={() => { setExpandedOrderId(expandedOrderId === order.id ? null : order.id); setEditingSpecItemId(null); setEditingOrderItem(null); }}>{expandedOrderId === order.id ? "Hide" : "Items"}</button></td>
                         </tr>
                         {expandedOrderId === order.id && <tr key={`${order.id}-details`} className="order-detail-row"><td colSpan={7}>
-                          <div className="order-items-detail">{order.items.map((item) => <section className="order-item-detail" key={item.id}>
+                          <div className="order-items-detail">
+                            {order.releasedAt ? (
+                              <div className="release-info" role="status">
+                                <strong>Released</strong>
+                                <span>{new Date(order.releasedAt).toLocaleString()}</span>
+                                <span>Order details are locked.</span>
+                              </div>
+                            ) : order.status === "OPEN" ? (
+                              <div className="release-controls">
+                                <p>Review the order before releasing. Its details will be locked afterward.</p>
+                                <button className="edit-button release-button" type="button" disabled={releasingOrderId === order.id} onClick={() => void releaseOrder(order)}>
+                                  {releasingOrderId === order.id ? "Releasing…" : "Release order"}
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="form-hint">{order.status === "DRAFT" ? "Change the order status to Open before releasing it." : "Cancelled orders cannot be released."}</p>
+                            )}
+                            {order.items.map((item) => <section className="order-item-detail" key={item.id}>
                             <div className="item-detail-heading">
                               <div>
                                 <strong>Line {item.lineNumber}: {item.description}</strong>
                                 <span>{item.quantity} unit{item.quantity === 1 ? "" : "s"} × {formatCurrency(item.unitPrice)} = {formatCurrency(item.lineTotal)}</span>
                               </div>
                               <div className="item-detail-actions">
-                                {order.status === "CANCELLED"
+                                {order.releasedAt
+                                  ? <span className="muted">Editing locked after release</span>
+                                  : order.status === "CANCELLED"
                                   ? <span className="muted">Editing locked for cancelled orders</span>
                                   : <button className="edit-button" type="button" aria-expanded={editingOrderItem?.itemId === item.id} onClick={() => editingOrderItem?.itemId === item.id ? setEditingOrderItem(null) : editOrderItem(order.id, item)}>{editingOrderItem?.itemId === item.id ? "Close item editor" : "Edit quantity / price"}</button>}
-                                <button className="edit-button" type="button" aria-expanded={editingSpecItemId === item.id} onClick={() => { setEditingOrderItem(null); setEditingSpecItemId(editingSpecItemId === item.id ? null : item.id); }}>{editingSpecItemId === item.id ? "Close specification" : item.glassUnit ? "Edit specification" : "Add specification"}</button>
+                                {order.releasedAt
+                                  ? <span className="muted">Specification locked after release</span>
+                                  : <button className="edit-button" type="button" aria-expanded={editingSpecItemId === item.id} onClick={() => { setEditingOrderItem(null); setEditingSpecItemId(editingSpecItemId === item.id ? null : item.id); }}>{editingSpecItemId === item.id ? "Close specification" : item.glassUnit ? "Edit specification" : "Add specification"}</button>}
                               </div>
                             </div>
                             {editingOrderItem?.itemId === item.id && <form className="item-edit-form form-stack" onSubmit={(event) => void saveOrderItem(event)}>
@@ -387,7 +432,8 @@ export default function App() {
                             </form>}
                             {item.glassUnit ? <GlassUnitSummary unit={item.glassUnit} /> : <p className="form-hint">No structured glass specification has been saved for this order item yet.</p>}
                             {editingSpecItemId === item.id && <GlassUnitEditor orderItemId={item.id} unit={item.glassUnit} catalogs={glassCatalogs} onSaved={() => void refresh()} />}
-                          </section>)}</div>
+                          </section>)}
+                          </div>
                         </td></tr>}
                       </Fragment>
                     ))}</tbody>

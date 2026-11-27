@@ -150,6 +150,7 @@ export type Order = {
   id: string;
   orderNumber: number;
   status: "DRAFT" | "OPEN" | "CANCELLED";
+  releasedAt: string | null;
   dueDate: string | null;
   createdAt: string;
   totalPrice: string;
