@@ -3,6 +3,8 @@ import { z } from "zod";
 import { CatalogKind, Prisma } from "@prisma/client";
 import { prisma } from "./db.js";
 import { NotFoundError } from "./errors.js";
+import { lockOrder } from "./order-lock.js";
+import { assertOrderNotReleased } from "./physical-tracking.js";
 import {
   glassCatalogSchema,
   glassUnitSchema,
@@ -246,10 +248,17 @@ glassSpecificationsRouter.get("/:orderItemId/glass-unit", async (request, respon
 glassSpecificationsRouter.put("/:orderItemId/glass-unit", async (request, response, next) => {
   try {
     const input = glassUnitSchema.parse(request.body);
-    const orderItem = await prisma.orderItem.findUnique({ where: { id: request.params.orderItemId } });
-    if (!orderItem) throw new NotFoundError("Order item not found.");
-    const unit = await prisma.$transaction((transaction) =>
-      saveGlassUnitForOrderItem(transaction, orderItem.id, input));
+    const unit = await prisma.$transaction(async (transaction) => {
+      const orderItem = await transaction.orderItem.findUnique({
+        where: { id: request.params.orderItemId },
+        select: { id: true, orderId: true },
+      });
+      if (!orderItem) throw new NotFoundError("Order item not found.");
+      const order = await lockOrder(transaction, orderItem.orderId);
+      if (!order) throw new NotFoundError("Order not found.");
+      assertOrderNotReleased(order);
+      return saveGlassUnitForOrderItem(transaction, orderItem.id, input);
+    });
     response.json(serializeUnit(unit));
   } catch (error) {
     next(error);

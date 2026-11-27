@@ -101,6 +101,11 @@ td:last-child, th:last-child { padding-right: 22px; }
 .empty-inline { padding: 13px; background: #f7f9f8; border-radius: 8px; color: #7d8c90; font-size: 11px; }
 .order-detail-row > td { padding: 0; background: #f8faf9; }
 .order-items-detail { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+.release-info, .release-controls { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid #dfe9e7; border-radius: 9px; background: #fff; color: #587076; font-size: 10px; }
+.release-info strong { color: #2e7068; }
+.release-controls { justify-content: space-between; }
+.release-controls p { margin: 0; }
+.release-button { color: #2e7068; }
 .order-item-detail { padding: 14px; border: 1px solid #e4ebea; border-radius: 9px; background: #fff; display: flex; flex-direction: column; gap: 12px; }
 .item-detail-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .item-detail-heading > div { display: flex; flex-direction: column; gap: 4px; }

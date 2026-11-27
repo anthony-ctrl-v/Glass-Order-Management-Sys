@@ -209,8 +209,23 @@ This file records agent-assisted work and the related user verification for this
 - Tests or checks run: Prisma schema validation and client generation passed; migration `20261127035553_physical_tracking_records` applied locally; API tests (22) passed; API and web builds passed; `git diff --check` passed.
 - User verification: Not yet performed; this issue adds data structures and a migration rather than a user-visible workflow.
 - Follow-up:
-  - Review and create a PR for issue #18; release-triggered generation and editing locks are tracked separately in issue #19.
+  - PR #21 was merged into `main`, closing issue #18. Release-triggered generation and editing locks are tracked separately in issue #19.
 - Related Work:
   - Issue: #18 — Add physical unit and pane records (Physical Tracking milestone)
+  - Commit or tag: `b4ba2f6` — physical unit and pane tracking records
+  - Pull request: #21 — Add physical unit and pane tracking records (merged)
+
+## Issue #019 — Release Orders and Generate Physical Tracking Records
+
+- Date: 2026-11-26
+- Agent: GitHub Copilot
+- Work completed: Added explicit release for unreleased OPEN orders. Release validates that each item has a pane specification, then atomically stores `releasedAt` and generates one physical unit per ordered quantity and one physical pane per specified pane. Generated identifiers use `{orderNumber}-{lineNumber}-{unitNumber}` for units and append `{panePosition}` for panes. Order, item, and specification edits are locked after release; cancellation remains allowed and retains tracking records. Released orders cannot be reopened.
+- Tests or checks run: Prisma schema validation and client generation passed; migration `20261127040700_order_release` applied locally; API tests (26) passed; API and web builds passed; `git diff --check` passed. A direct local API/database check verified release, generated identifiers, duplicate-release rejection, post-release edit rejection, cancellation, and retained physical units; its temporary data and runner were removed.
+- User verification: A browser smoke check confirmed that release controls render for an OPEN order. The release action was not activated on existing local records; full workflow verification remains pending.
+- Follow-up:
+  - The implementation is on `feature/issue-19-order-release`; it has not yet been committed or pushed.
+  - After browser verification and merge, issue #19 can be closed. Unit/pane detail display is tracked in issue #20.
+- Related Work:
+  - Issue: #19 — Release orders and generate physical units/panes (Physical Tracking milestone)
   - Commit or tag: None
   - Pull request: None
