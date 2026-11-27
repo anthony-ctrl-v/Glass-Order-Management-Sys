@@ -27,10 +27,12 @@ export const customerSchema = z.object({
   }),
 });
 
+const unitPriceSchema = z.string().regex(/^\d{1,10}(\.\d{1,2})?$/, "Enter a non-negative price with up to two decimal places.");
+
 const orderItemSchema = z.object({
   description: z.string().trim().min(1).max(500),
   quantity: z.number().int().positive().max(100_000),
-  unitPrice: z.string().regex(/^\d{1,10}(\.\d{1,2})?$/, "Enter a non-negative price with up to two decimal places."),
+  unitPrice: unitPriceSchema,
   glassUnit: glassUnitSchema,
 });
 
@@ -58,4 +60,9 @@ export const updateOrderSchema = z.object({
     phone: optionalText,
     email: z.string().trim().email().max(254).optional().nullable().or(z.literal("")),
   }).optional(),
+});
+
+export const updateOrderItemSchema = z.object({
+  quantity: z.number().int().positive().max(100_000),
+  unitPrice: unitPriceSchema,
 });

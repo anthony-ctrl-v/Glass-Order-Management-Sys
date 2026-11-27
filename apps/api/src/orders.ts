@@ -1,10 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { prisma } from "./db.js";
-import { NotFoundError } from "./errors.js";
+import { ConflictError, NotFoundError } from "./errors.js";
 import { glassUnitInclude, saveGlassUnitForOrderItem } from "./glass-specifications.js";
 import { serializeOrder } from "./serializers.js";
-import { createOrderSchema, updateOrderSchema } from "./validation.js";
+import { createOrderSchema, updateOrderItemSchema, updateOrderSchema } from "./validation.js";
 
 export const ordersRouter = Router();
 
@@ -94,6 +94,35 @@ ordersRouter.post("/", async (request, response, next) => {
       });
     });
     response.status(201).json(serializeOrder(order));
+  } catch (error) {
+    next(error);
+  }
+});
+
+ordersRouter.patch("/:id/items/:itemId", async (request, response, next) => {
+  try {
+    const input = updateOrderItemSchema.parse(request.body);
+    const orderItem = await prisma.orderItem.findFirst({
+      where: { id: request.params.itemId, orderId: request.params.id },
+      select: { id: true, order: { select: { status: true } } },
+    });
+    if (!orderItem) throw new NotFoundError("Order item not found.");
+    if (orderItem.order.status === "CANCELLED") {
+      throw new ConflictError("Items on cancelled orders cannot be edited.");
+    }
+
+    const updatedItem = await prisma.orderItem.update({
+      where: { id: orderItem.id },
+      data: {
+        quantity: input.quantity,
+        unitPrice: new Prisma.Decimal(input.unitPrice),
+      },
+    });
+    response.json({
+      ...updatedItem,
+      unitPrice: updatedItem.unitPrice.toFixed(2),
+      lineTotal: updatedItem.unitPrice.mul(updatedItem.quantity).toFixed(2),
+    });
   } catch (error) {
     next(error);
   }

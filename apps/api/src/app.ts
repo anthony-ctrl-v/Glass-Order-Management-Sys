@@ -2,7 +2,7 @@ import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 import { customersRouter } from "./customers.js";
-import { NotFoundError } from "./errors.js";
+import { ConflictError, NotFoundError } from "./errors.js";
 import { glassCatalogRouter, glassSpecificationsRouter } from "./glass-specifications.js";
 import { ordersRouter } from "./orders.js";
 
@@ -20,6 +20,11 @@ app.use("/api/glass-catalogs", glassCatalogRouter);
 app.use("/api/order-items", glassSpecificationsRouter);
 
 const errorHandler: ErrorRequestHandler = (error: unknown, _request, response, _next) => {
+  if (error instanceof ConflictError) {
+    response.status(409).json({ error: error.message });
+    return;
+  }
+
   if (error instanceof NotFoundError) {
     response.status(404).json({ error: error.message });
     return;

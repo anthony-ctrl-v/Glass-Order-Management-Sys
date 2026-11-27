@@ -104,8 +104,12 @@ td:last-child, th:last-child { padding-right: 22px; }
 .order-item-detail { padding: 14px; border: 1px solid #e4ebea; border-radius: 9px; background: #fff; display: flex; flex-direction: column; gap: 12px; }
 .item-detail-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .item-detail-heading > div { display: flex; flex-direction: column; gap: 4px; }
+.item-detail-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; }
 .item-detail-heading strong { color: #344b51; font-size: 11px; }
 .item-detail-heading span { color: #849397; font-size: 10px; }
+.item-edit-form { padding: 12px; border: 1px solid #e8eded; border-radius: 8px; background: #fbfcfc; }
+.item-edit-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.item-edit-actions .primary-button { width: auto; }
 .glass-unit-summary { color: #5b6d72; font-size: 10px; line-height: 1.6; }
 .glass-unit-summary p { margin: 4px 0; }
 .glass-unit-summary > p:first-child { color: #42746f; }
