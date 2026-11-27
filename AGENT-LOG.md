@@ -195,8 +195,9 @@ This file records agent-assisted work and the related user verification for this
 - Tests or checks run: API suite passed (22 tests), API TypeScript build passed, web TypeScript/production build passed, and `git diff --check` passed.
 - User verification: The user confirmed in the browser that saved order-item quantity and pricing edits work as expected.
 - Follow-up:
-  - Create a pull request that closes issue #13, then merge it after review.
+  - PR #16 was merged into `main`; GitHub closed issue #13. The user confirmed the Customers and Orders milestone is now at 100%.
+  - The user selected Physical Tracking as the next milestone, followed by Production Workflow.
 - Related Work:
   - Issue: #13 — Manage order items and calculating pricing (Customers and Orders milestone)
-  - Commit or tag: None
-  - Pull request: None
+  - Commit or tag: `feac237` — edit saved order-item quantity and pricing
+  - Pull request: #16 — feat: edit saved order item pricing (merged)
