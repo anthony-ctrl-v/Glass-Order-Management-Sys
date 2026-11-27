@@ -182,11 +182,10 @@ This file records agent-assisted work and the related user verification for this
 - Agent: GitHub Copilot
 - Work completed: Started the next requested enhancement on `feature/order-create-requires-glass-spec`. Added the existing glass-unit editor to each order-item draft so the user must apply a valid specification before submitting an order. The create-order API now requires a glass-unit specification on every item and persists all order items and specifications in one transaction. Extracted shared glass-unit persistence/catalog validation so the existing post-creation specification editor and new order-creation flow use the same logic.
 - Tests or checks run: API suite passed (20 tests), API TypeScript build passed, web TypeScript/production build passed, and `git diff --check` passed.
-- User verification: Not yet performed in the browser.
+- User verification: The user created GitHub issue #14 and tested the website flow, confirming the implementation behaves as expected.
 - Follow-up:
-  - User should verify creating orders with one and multiple items, and confirm the order cannot be submitted until every item's specification is applied.
-  - Verify each supported construction type and required catalog values in the integrated form.
-  - Create/assign the corresponding GitHub issue to the Customers and Orders milestone if it has not already been created; leave it open until implementation is reviewed and merged.
+  - Create a pull request from `feature/order-create-requires-glass-spec` with `Closes #14` in its description, then merge after review so GitHub closes the issue.
 - Related Work:
-  - Commit or tag: None
+  - Issue: #14 — created by the user
+  - Commit or tag: `bb61ef4` — require glass specifications during order creation
   - Pull request: None
