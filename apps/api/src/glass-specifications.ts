@@ -128,6 +128,109 @@ function gapPaneIds(panes: Array<{ id: string }>, gapNumber: number) {
   return { leftPaneId: leftPane.id, rightPaneId: rightPane.id };
 }
 
+export async function saveGlassUnitForOrderItem(
+  transaction: Prisma.TransactionClient,
+  orderItemId: string,
+  input: z.infer<typeof glassUnitSchema>,
+) {
+  const requestedCatalogEntries = [
+    ...input.panes.map((pane) => ({ id: pane.glassProductId, kind: CatalogKind.GLASS_PRODUCT })),
+    ...input.panes.flatMap((pane) => pane.surfaces.flatMap((surface) =>
+      surface.treatmentIds.map((id) => ({ id, kind: CatalogKind.SURFACE_TREATMENT })))),
+    ...input.interlayers.flatMap((layer) => [
+      { id: layer.materialId, kind: CatalogKind.INTERLAYER_MATERIAL },
+      { id: layer.colorId, kind: CatalogKind.INTERLAYER_COLOR },
+    ]),
+    ...input.cavities.flatMap((cavity) => [
+      { id: cavity.spacerTypeId, kind: CatalogKind.SPACER_TYPE },
+      { id: cavity.spacerColorId, kind: CatalogKind.SPACER_COLOR },
+    ]),
+  ];
+  const catalogEntries = await transaction.glassCatalogEntry.findMany({
+    where: { id: { in: [...new Set(requestedCatalogEntries.map((entry) => entry.id))] } },
+    select: { id: true, kind: true, hasLowESide: true },
+  });
+  const kindsById = new Map(catalogEntries.map((entry) => [entry.id, entry.kind]));
+  const productsById = new Map(catalogEntries
+    .filter((entry) => entry.kind === CatalogKind.GLASS_PRODUCT)
+    .map((entry) => [entry.id, { hasLowESide: entry.hasLowESide }]));
+  const lowESideIssues = validateLowESideSelections(input.panes, productsById);
+  if (lowESideIssues.length > 0) throw new z.ZodError(lowESideIssues);
+  for (const requested of requestedCatalogEntries) {
+    if (kindsById.get(requested.id) !== requested.kind) {
+      throw new z.ZodError([{
+        code: "custom",
+        path: ["catalog"],
+        message: `A selected entry is missing or is not a ${requested.kind.toLowerCase().replaceAll("_", " ")} catalog entry.`,
+      }]);
+    }
+  }
+
+  await transaction.glassUnit.deleteMany({ where: { orderItemId } });
+  const createdUnit = await transaction.glassUnit.create({
+    data: {
+      orderItemId,
+      overallWidth: new Prisma.Decimal(input.overallWidth),
+      overallHeight: new Prisma.Decimal(input.overallHeight),
+      construction: input.construction,
+      notes: input.notes,
+      panes: {
+        create: input.panes.map((pane, paneIndex) => ({
+          position: paneIndex + 1,
+          glassProduct: { connect: { id: pane.glassProductId } },
+          width: new Prisma.Decimal(pane.width),
+          height: new Prisma.Decimal(pane.height),
+          thickness: new Prisma.Decimal(pane.thickness),
+          lowESide: pane.lowESide,
+          heatTreatment: pane.heatTreatment,
+          hasHoles: pane.hasHoles,
+          flatPolish: pane.flatPolish,
+          bevel: pane.bevel,
+          surfaces: {
+            create: pane.surfaces.map((surface) => ({
+              side: surface.side,
+              treatments: {
+                create: surface.treatmentIds.map((treatmentId, sequence) => ({
+                  sequence: sequence + 1,
+                  treatment: { connect: { id: treatmentId } },
+                })),
+              },
+            })),
+          },
+        })),
+      },
+    },
+    include: { panes: { orderBy: { position: "asc" } } },
+  });
+  await transaction.glassInterlayer.createMany({
+    data: input.interlayers.map((layer) => ({
+      glassUnitId: createdUnit.id,
+      gapNumber: layer.gapNumber,
+      sheetNumber: layer.sheetNumber,
+      ...gapPaneIds(createdUnit.panes, layer.gapNumber),
+      materialId: layer.materialId,
+      colorId: layer.colorId,
+      thickness: new Prisma.Decimal(layer.thickness),
+      brand: layer.brand,
+    })),
+  });
+  await transaction.insulatingCavity.createMany({
+    data: input.cavities.map((cavity) => ({
+      glassUnitId: createdUnit.id,
+      gapNumber: cavity.gapNumber,
+      ...gapPaneIds(createdUnit.panes, cavity.gapNumber),
+      spacerTypeId: cavity.spacerTypeId,
+      spacerColorId: cavity.spacerColorId,
+      width: new Prisma.Decimal(cavity.width),
+      gasFilled: cavity.gasFilled,
+    })),
+  });
+  return transaction.glassUnit.findUniqueOrThrow({
+    where: { id: createdUnit.id },
+    include: glassUnitInclude,
+  });
+}
+
 glassSpecificationsRouter.get("/:orderItemId/glass-unit", async (request, response, next) => {
   try {
     const unit = await prisma.glassUnit.findUnique({
@@ -145,105 +248,8 @@ glassSpecificationsRouter.put("/:orderItemId/glass-unit", async (request, respon
     const input = glassUnitSchema.parse(request.body);
     const orderItem = await prisma.orderItem.findUnique({ where: { id: request.params.orderItemId } });
     if (!orderItem) throw new NotFoundError("Order item not found.");
-
-    const requestedCatalogEntries = [
-      ...input.panes.map((pane) => ({ id: pane.glassProductId, kind: CatalogKind.GLASS_PRODUCT })),
-      ...input.panes.flatMap((pane) => pane.surfaces.flatMap((surface) =>
-        surface.treatmentIds.map((id) => ({ id, kind: CatalogKind.SURFACE_TREATMENT })))),
-      ...input.interlayers.flatMap((layer) => [
-        { id: layer.materialId, kind: CatalogKind.INTERLAYER_MATERIAL },
-        { id: layer.colorId, kind: CatalogKind.INTERLAYER_COLOR },
-      ]),
-      ...input.cavities.flatMap((cavity) => [
-        { id: cavity.spacerTypeId, kind: CatalogKind.SPACER_TYPE },
-        { id: cavity.spacerColorId, kind: CatalogKind.SPACER_COLOR },
-      ]),
-    ];
-    const catalogEntries = await prisma.glassCatalogEntry.findMany({
-      where: { id: { in: [...new Set(requestedCatalogEntries.map((entry) => entry.id))] } },
-      select: { id: true, kind: true, hasLowESide: true },
-    });
-    const kindsById = new Map(catalogEntries.map((entry) => [entry.id, entry.kind]));
-    const productsById = new Map(catalogEntries
-      .filter((entry) => entry.kind === CatalogKind.GLASS_PRODUCT)
-      .map((entry) => [entry.id, { hasLowESide: entry.hasLowESide }]));
-    const lowESideIssues = validateLowESideSelections(input.panes, productsById);
-    if (lowESideIssues.length > 0) throw new z.ZodError(lowESideIssues);
-    for (const requested of requestedCatalogEntries) {
-      if (kindsById.get(requested.id) !== requested.kind) {
-        throw new z.ZodError([{
-          code: "custom",
-          path: ["catalog"],
-          message: `A selected entry is missing or is not a ${requested.kind.toLowerCase().replaceAll("_", " ")} catalog entry.`,
-        }]);
-      }
-    }
-
-    const unit = await prisma.$transaction(async (transaction) => {
-      await transaction.glassUnit.deleteMany({ where: { orderItemId: orderItem.id } });
-      const createdUnit = await transaction.glassUnit.create({
-        data: {
-          orderItemId: orderItem.id,
-          overallWidth: new Prisma.Decimal(input.overallWidth),
-          overallHeight: new Prisma.Decimal(input.overallHeight),
-          construction: input.construction,
-          notes: input.notes,
-          panes: {
-            create: input.panes.map((pane, paneIndex) => ({
-              position: paneIndex + 1,
-              glassProduct: { connect: { id: pane.glassProductId } },
-              width: new Prisma.Decimal(pane.width),
-              height: new Prisma.Decimal(pane.height),
-              thickness: new Prisma.Decimal(pane.thickness),
-              lowESide: pane.lowESide,
-              heatTreatment: pane.heatTreatment,
-              hasHoles: pane.hasHoles,
-              flatPolish: pane.flatPolish,
-              bevel: pane.bevel,
-              surfaces: {
-                create: pane.surfaces.map((surface) => ({
-                  side: surface.side,
-                  treatments: {
-                    create: surface.treatmentIds.map((treatmentId, sequence) => ({
-                      sequence: sequence + 1,
-                      treatment: { connect: { id: treatmentId } },
-                    })),
-                  },
-                })),
-              },
-            })),
-          },
-        },
-        include: { panes: { orderBy: { position: "asc" } } },
-      });
-      await transaction.glassInterlayer.createMany({
-        data: input.interlayers.map((layer) => ({
-          glassUnitId: createdUnit.id,
-          gapNumber: layer.gapNumber,
-          sheetNumber: layer.sheetNumber,
-          ...gapPaneIds(createdUnit.panes, layer.gapNumber),
-          materialId: layer.materialId,
-          colorId: layer.colorId,
-          thickness: new Prisma.Decimal(layer.thickness),
-          brand: layer.brand,
-        })),
-      });
-      await transaction.insulatingCavity.createMany({
-        data: input.cavities.map((cavity) => ({
-          glassUnitId: createdUnit.id,
-          gapNumber: cavity.gapNumber,
-          ...gapPaneIds(createdUnit.panes, cavity.gapNumber),
-          spacerTypeId: cavity.spacerTypeId,
-          spacerColorId: cavity.spacerColorId,
-          width: new Prisma.Decimal(cavity.width),
-          gasFilled: cavity.gasFilled,
-        })),
-      });
-      return transaction.glassUnit.findUniqueOrThrow({
-        where: { id: createdUnit.id },
-        include: glassUnitInclude,
-      });
-    });
+    const unit = await prisma.$transaction((transaction) =>
+      saveGlassUnitForOrderItem(transaction, orderItem.id, input));
     response.json(serializeUnit(unit));
   } catch (error) {
     next(error);

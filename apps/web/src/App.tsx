@@ -3,7 +3,7 @@ import { api } from "./api";
 import { GlassCatalogManager } from "./GlassCatalogManager";
 import { GlassUnitEditor } from "./GlassUnitEditor";
 import { formatInches } from "./format-inches";
-import type { Customer, GlassCatalogEntry, GlassUnit, Order } from "./types";
+import type { Customer, GlassCatalogEntry, GlassUnit, GlassUnitInput, Order } from "./types";
 
 type CustomerForm = {
   legalName: string;
@@ -32,6 +32,7 @@ type ItemDraft = {
   description: string;
   quantity: number;
   unitPrice: string;
+  glassUnit: GlassUnitInput | null;
 };
 
 const emptyCustomer: CustomerForm = {
@@ -57,7 +58,7 @@ const emptyCustomer: CustomerForm = {
   shippingCountry: "United States",
 };
 
-const emptyItem: ItemDraft = { description: "", quantity: 1, unitPrice: "" };
+const emptyItem: ItemDraft = { description: "", quantity: 1, unitPrice: "", glassUnit: null };
 
 function addressFields(line1: string, line2: string, city: string, region: string, postalCode: string, country: string) {
   return { line1, line2, city, region, postalCode, country };
@@ -97,6 +98,7 @@ export default function App() {
   const [editingSpecItemId, setEditingSpecItemId] = useState<string | null>(null);
   const [customerForm, setCustomerForm] = useState<CustomerForm>(emptyCustomer);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
+  const [editingSpecDraftIndex, setEditingSpecDraftIndex] = useState<number | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [billingSnapshot, setBillingSnapshot] = useState(customerAddress(undefined, "billing"));
   const [shippingSnapshot, setShippingSnapshot] = useState(customerAddress(undefined, "shipping"));
@@ -234,13 +236,18 @@ export default function App() {
         billingAddress: billingSnapshot,
         shippingAddress: shippingSnapshot,
         shippingContact,
-        items: items.map((item) => ({
-          description: item.description,
-          quantity: Number(item.quantity),
-          unitPrice: item.unitPrice,
-        })),
+        items: items.map((item, index) => {
+          if (!item.glassUnit) throw new Error(`Add a glass specification for line ${index + 1}.`);
+          return {
+            description: item.description,
+            quantity: Number(item.quantity),
+            unitPrice: item.unitPrice,
+            glassUnit: item.glassUnit,
+          };
+        }),
       });
       setItems([{ ...emptyItem }]);
+      setEditingSpecDraftIndex(null);
       setDueDate("");
       await refresh();
       setNotice(`Order ${created.orderNumber} was created.`);
@@ -254,6 +261,9 @@ export default function App() {
   function updateItem(index: number, patch: Partial<ItemDraft>) {
     setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   }
+
+  const specificationsComplete = items.every((item) => item.glassUnit !== null)
+    && editingSpecDraftIndex === null;
 
   return (
     <div className="app-shell">
@@ -343,17 +353,43 @@ export default function App() {
                   <div className="order-lines">
                     {items.map((item, index) => (
                       <div className="order-line" key={index}>
-                        <div className="line-title">Line {index + 1}{items.length > 1 && <button type="button" className="remove-button" aria-label={`Remove line ${index + 1}`} onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button>}</div>
+                        <div className="line-title">
+                          Line {index + 1}
+                          {items.length > 1 && <button type="button" className="remove-button" aria-label={`Remove line ${index + 1}`} onClick={() => { setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)); setEditingSpecDraftIndex(null); }}>×</button>}
+                        </div>
                         <label>Glass make / description<input required maxLength={500} placeholder="e.g. Clear monolithic glass" value={item.description} onChange={(event) => updateItem(index, { description: event.target.value })} /></label>
                         <div className="line-fields">
                           <label>Quantity<input required type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateItem(index, { quantity: Number(event.target.value) })} /></label>
                           <label>Unit price<input required type="number" min="0" step="0.01" value={item.unitPrice} placeholder="0.00" onChange={(event) => updateItem(index, { unitPrice: event.target.value })} /></label>
                         </div>
+                        <div className={`item-specification-control ${item.glassUnit ? "complete" : "required"}`}>
+                          <span>{item.glassUnit ? "Glass specification ready" : "Glass specification required"}</span>
+                          <button
+                            type="button"
+                            className="edit-button"
+                            aria-expanded={editingSpecDraftIndex === index}
+                            onClick={() => setEditingSpecDraftIndex(editingSpecDraftIndex === index ? null : index)}
+                          >
+                            {editingSpecDraftIndex === index ? "Close editor" : item.glassUnit ? "Edit specification" : "Add specification"}
+                          </button>
+                        </div>
+                        {editingSpecDraftIndex === index && (
+                          <GlassUnitEditor
+                            unit={null}
+                            initialDraft={item.glassUnit}
+                            catalogs={glassCatalogs}
+                            onDraftSaved={(glassUnit) => {
+                              updateItem(index, { glassUnit });
+                              setEditingSpecDraftIndex(null);
+                            }}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
+                  {!specificationsComplete && <p className="form-hint">Add a valid glass specification to every order item before creating the order.</p>}
                   <div className="total-row"><span>Calculated order total</span><strong>{formatCurrency(draftTotal.toFixed(2))}</strong></div>
-                  <button className="primary-button" disabled={savingOrder || !selectedCustomerId}>{savingOrder ? "Creating order…" : "Create order"}<span>→</span></button>
+                  <button className="primary-button" disabled={savingOrder || !selectedCustomerId || !specificationsComplete}>{savingOrder ? "Creating order…" : "Create order"}<span>→</span></button>
                 </form>
               )}
             </section>

@@ -34,7 +34,7 @@ Implementation is being delivered in four milestones. Milestone 1 covers custome
 
 ## Development Status
 
-Milestone 1 is implemented: customer/contact management, order entry, order items, address/contact snapshots, pricing, and order lifecycle status. Milestone 2 is implemented on the `milestone/02-glass-specifications` branch and is being tested before its pull request: glass catalogs, pane and surface specifications, per-product Low-E support with required Side A/Side B orientation, interlayers, insulating cavities, and order-item specification views. Physical pane tracking and production workflows remain planned for later milestones.
+Milestone 1 (customers and orders) and Milestone 2 (glass products and specifications) are merged into `main`. Milestone 2 includes editable glass catalogs, pane and surface specifications, per-product Low-E support with required Side A/Side B orientation, interlayers, insulating cavities, and order-item specification views. Physical pane tracking and production workflows remain planned for later milestones; Milestone 3 scope has not yet been agreed.
 
 ## Basic Local Setup
 

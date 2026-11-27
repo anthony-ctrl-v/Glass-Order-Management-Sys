@@ -144,8 +144,48 @@ This file records agent-assisted work and the related user verification for this
 - Work completed: Implemented milestone 2 on `milestone/02-glass-specifications`. Added relational models and a PostgreSQL migration for categorized glass catalogs, glass units, ordered pane specifications, Side A/Side B surfaces and treatments, sequenced interlayers, and insulating cavities. Added catalog management and glass-unit specification APIs, request validation for construction/pane-gap relationships, and order-item views/editors that show saved specifications. Pane dimensions, thickness, and cavity width display inch fractions while retaining numeric-inch values. After user UI feedback, moved each shaded gap panel between adjacent panes and changed laminated-insulated construction so each gap is exclusively laminated or insulated; all gaps must be assigned, with at least one of each, before saving. Added a Low-E flag to glass-product catalog entries and require each pane using such a product to select Side A or Side B; the API rejects inconsistent catalog edits and pane selections. The user created and assigned GitHub issues #5–#9 to the “Glass Products and Specifications” milestone.
 - Files changed: `README.md`, `AGENT-LOG.md`, `apps/api/prisma/schema.prisma`, the new glass-specification and Low-E migrations, API modules/tests, and `apps/web/src` catalog, order-detail, and editor files. The GitHub Wiki `Log.md` was updated.
 - Tests or checks run: Prisma client generation and formatting; API and web production builds; `npm test` (19 passing tests, including Low-E orientation and gap exclusivity/completion requirements); applied the Low-E migration to local PostgreSQL; exercised Low-E product creation and glass-unit create/read through the API against PostgreSQL, confirming missing orientation is rejected and Side B is persisted; removed all temporary test records; inspected the browser catalog form's Low-E checkbox; `git diff --check`.
-- User verification: The implementation remains on the feature branch and has not been pushed or merged. No production tracking or per-pane checklist behavior was added.
+- User verification: The user reviewed the milestone 2 workflow, created PR #10, assigned the “Glass Products and Specifications” milestone to the PR, merged it, and closed the GitHub milestone. The user then asked to sync local `main`; the fast-forward completed with a clean worktree. No physical production tracking or per-pane checklist behavior was added in milestone 2.
 - Follow-up:
-  - Review the local milestone 2 workflows and test results.
-  - Push the feature branch and open a pull request referencing issues #5–#9 after the user is ready for that workflow step.
-  - Merge to `main` and close the milestone issues only after review and approval.
+  - Milestone 2 is complete and merged. Agree on milestone 3 scope before creating its issues or feature branch.
+
+## Issue #014 — Milestone 2 Review, Merge, and Milestone 3 Handoff
+
+- Date: 2026-11-01
+- Agent: GitHub Copilot
+- Work completed: Recorded the completion of milestone 2 and today's workflow handoff. The user independently created PR #10 from `milestone/02-glass-specifications` into `main`, assigned the “Glass Products and Specifications” milestone to that pull request, merged it, and closed the milestone. At the user's request, fetched GitHub refs, confirmed local `main` could fast-forward cleanly, switched to `main`, and pulled the merge commit `b734077`; the local worktree is clean and matches `origin/main`. Updated the README and existing weekly Wiki log so they describe the merged state rather than a pending pull request.
+- User participation: The user actively steered the work throughout the milestone: clarified the relational schema and the placement of interlayers beside cavities under a glass unit; created and assigned issues #5–#9 to the milestone; reviewed the UI and specified exclusive laminated-versus-insulating pane gaps, gap placement, and Low-E product/orientation behavior; entered catalog data and tested the app in their own browser; created and assigned the PR milestone; merged the PR; closed the milestone; and asked to synchronize local `main`. They also caught the sample-order mismatch during hands-on testing and verified that customer creation worked in their local browser. Milestone 3 implementation has not started: its scope is still to be agreed collaboratively.
+- Current relational tables: `Customer` stores company identity, phone/email, and default billing/shipping addresses; `CustomerContact` stores that customer's default contact; `Order` stores customer relationship, generated order number, due date/status, and per-order address/contact snapshots; `OrderItem` stores each order line's description, quantity, unit price, and line number; `GlassCatalogEntry` stores categorized glass products, surface treatments, interlayer materials/colors, and spacer types/colors (including Low-E and facility-work flags); `GlassUnit` stores an order item's overall dimensions, construction, and notes; `PaneSpecification` stores each ordered pane's product, position, dimensions, thickness, Low-E side, heat treatment, holes, and edge work; `PaneSurface` stores Side A or B per pane; `PaneSurfaceTreatment` links catalog treatments to a surface in sequence; `GlassInterlayer` stores sequenced interlayer sheets and their material/color/thickness/brand for a pane gap; `InsulatingCavity` stores spacer/color, width, gas-filled status, and adjacent panes for a pane gap. Production tracking tables (physical units/panes, departments, checklist steps/scans/audits, and staff) do not exist yet; they are part of future scope.
+- Tests or checks run: Verified PR #10 is merged and issues #5–#9 are closed in GitHub; fetched and fast-forwarded local `main` to `b734077`; confirmed `git status` is clean and `main` matches `origin/main`.
+- Follow-up:
+  - Resume by agreeing on milestone 3 scope, using the existing requirements as a starting point while confirming priorities and boundaries with the user.
+  - After scope agreement, prepare milestone 3 issues and assign them to the GitHub milestone before creating its feature branch.
+
+## Issue #015 — Customer and Order Workflow Follow-ups
+
+- Date: 2026-11-26
+- Agent: GitHub Copilot
+- Work completed: Recorded feature requests from the user's hands-on website testing for follow-up implementation, to be handled one at a time:
+  - **Orders and customer-data snapshots:** Require glass specifications as part of initial order creation instead of requiring the user to create an order and later find it under recent orders to add specifications.
+  - **Order items and pricing:** Add controls to manage item pricing and number of units.
+- User question: Asked whether deleting a customer would affect existing orders.
+- Finding: The current Prisma relation uses `Order.customerId` with `onDelete: Restrict`, and the default contact relation uses `onDelete: Cascade`. No customer-delete API is implemented. Existing orders contain snapshots of their addresses and shipping contact, but retain their required customer relation.
+- Decision: The user decided not to add a customer-delete button. Keep existing customer/order associations and order history intact; no deletion behavior needs implementation.
+- User asked for help creating/assigning issues to the Customers and Orders milestone and marking completed work. User chose to expand the issue criteria: record customer/default-contact management as a completed issue (customer deletion is not requested); keep order creation with required initial glass specifications and order-item quantity/pricing management as open issues until implemented.
+- Follow-up:
+  - Review which existing Customers and Orders functionality can be documented and closed as completed.
+  - Verify and review the initial-order glass specification implementation on its feature branch; leave the GitHub issue open until reviewed and merged.
+  - Track order-item pricing and quantity management as unfinished work.
+
+## Issue #016 — Require Glass Specifications During Order Creation
+
+- Date: 2026-11-26
+- Agent: GitHub Copilot
+- Work completed: Started the next requested enhancement on `feature/order-create-requires-glass-spec`. Added the existing glass-unit editor to each order-item draft so the user must apply a valid specification before submitting an order. The create-order API now requires a glass-unit specification on every item and persists all order items and specifications in one transaction. Extracted shared glass-unit persistence/catalog validation so the existing post-creation specification editor and new order-creation flow use the same logic.
+- Tests or checks run: API suite passed (20 tests), API TypeScript build passed, web TypeScript/production build passed, and `git diff --check` passed.
+- User verification: The user created GitHub issue #14 and tested the website flow, confirming the implementation behaves as expected.
+- Follow-up:
+  - Create a pull request from `feature/order-create-requires-glass-spec` with `Closes #14` in its description, then merge after review so GitHub closes the issue.
+- Related Work:
+  - Issue: #14 — created by the user
+  - Commit or tag: `bb61ef4` — require glass specifications during order creation
+  - Pull request: None
