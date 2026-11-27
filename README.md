@@ -21,7 +21,7 @@ Glass-manufacturing orders can require many specifications, production steps, de
 - Role-based access for system users
 - Reports or dashboard views for operational status
 
-Implementation is being delivered in four milestones. Milestone 1 covers customers, their default contact, orders, and order items. Milestone 2 adds editable glass specification catalogs and structured glass-unit specifications on order items. Physical pane tracking, production checklists, and fulfillment features will follow in later milestones.
+Implementation is being delivered in four milestones. Milestone 1 covers customers, their default contact, orders, and order items. Milestone 2 adds editable glass specification catalogs and structured glass-unit specifications on order items. Milestone 3 (Physical Tracking) adds individual physical units and panes with identifiers generated when an OPEN order is released; released order contents are locked. Milestone 4 (Production Workflow) will add departments, checklists, scans, audits, and readiness.
 
 ## Technology Stack
 
@@ -34,7 +34,7 @@ Implementation is being delivered in four milestones. Milestone 1 covers custome
 
 ## Development Status
 
-Milestone 1 (customers and orders) and Milestone 2 (glass products and specifications) are merged into `main`. Milestone 2 includes editable glass catalogs, pane and surface specifications, per-product Low-E support with required Side A/Side B orientation, interlayers, insulating cavities, and order-item specification views. Physical pane tracking and production workflows remain planned for later milestones; Milestone 3 scope has not yet been agreed.
+Milestone 1 (customers and orders) and Milestone 2 (glass products and specifications) are merged into `main`. Milestone 2 includes editable glass catalogs, pane and surface specifications, per-product Low-E support with required Side A/Side B orientation, interlayers, insulating cavities, and order-item specification views. Physical Tracking scope is agreed and tracked by issues #18–#20; implementation has started with the physical unit and pane data model. Production Workflow is the next milestone.
 
 ## Basic Local Setup
 
