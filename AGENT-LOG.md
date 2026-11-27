@@ -159,3 +159,34 @@ This file records agent-assisted work and the related user verification for this
 - Follow-up:
   - Resume by agreeing on milestone 3 scope, using the existing requirements as a starting point while confirming priorities and boundaries with the user.
   - After scope agreement, prepare milestone 3 issues and assign them to the GitHub milestone before creating its feature branch.
+
+## Issue #015 — Customer and Order Workflow Follow-ups
+
+- Date: 2026-11-26
+- Agent: GitHub Copilot
+- Work completed: Recorded feature requests from the user's hands-on website testing for follow-up implementation, to be handled one at a time:
+  - **Orders and customer-data snapshots:** Require glass specifications as part of initial order creation instead of requiring the user to create an order and later find it under recent orders to add specifications.
+  - **Order items and pricing:** Add controls to manage item pricing and number of units.
+- User question: Asked whether deleting a customer would affect existing orders.
+- Finding: The current Prisma relation uses `Order.customerId` with `onDelete: Restrict`, and the default contact relation uses `onDelete: Cascade`. No customer-delete API is implemented. Existing orders contain snapshots of their addresses and shipping contact, but retain their required customer relation.
+- Decision: The user decided not to add a customer-delete button. Keep existing customer/order associations and order history intact; no deletion behavior needs implementation.
+- User asked for help creating/assigning issues to the Customers and Orders milestone and marking completed work. User chose to expand the issue criteria: record customer/default-contact management as a completed issue (customer deletion is not requested); keep order creation with required initial glass specifications and order-item quantity/pricing management as open issues until implemented.
+- Follow-up:
+  - Review which existing Customers and Orders functionality can be documented and closed as completed.
+  - Verify and review the initial-order glass specification implementation on its feature branch; leave the GitHub issue open until reviewed and merged.
+  - Track order-item pricing and quantity management as unfinished work.
+
+## Issue #016 — Require Glass Specifications During Order Creation
+
+- Date: 2026-11-26
+- Agent: GitHub Copilot
+- Work completed: Started the next requested enhancement on `feature/order-create-requires-glass-spec`. Added the existing glass-unit editor to each order-item draft so the user must apply a valid specification before submitting an order. The create-order API now requires a glass-unit specification on every item and persists all order items and specifications in one transaction. Extracted shared glass-unit persistence/catalog validation so the existing post-creation specification editor and new order-creation flow use the same logic.
+- Tests or checks run: API suite passed (20 tests), API TypeScript build passed, web TypeScript/production build passed, and `git diff --check` passed.
+- User verification: Not yet performed in the browser.
+- Follow-up:
+  - User should verify creating orders with one and multiple items, and confirm the order cannot be submitted until every item's specification is applied.
+  - Verify each supported construction type and required catalog values in the integrated form.
+  - Create/assign the corresponding GitHub issue to the Customers and Orders milestone if it has not already been created; leave it open until implementation is reviewed and merged.
+- Related Work:
+  - Commit or tag: None
+  - Pull request: None

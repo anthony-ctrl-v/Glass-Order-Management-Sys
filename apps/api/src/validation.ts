@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { glassUnitSchema } from "./glass-validation.js";
 
 const optionalText = z.string().trim().max(250).optional().nullable();
 
@@ -30,6 +31,7 @@ const orderItemSchema = z.object({
   description: z.string().trim().min(1).max(500),
   quantity: z.number().int().positive().max(100_000),
   unitPrice: z.string().regex(/^\d{1,10}(\.\d{1,2})?$/, "Enter a non-negative price with up to two decimal places."),
+  glassUnit: glassUnitSchema,
 });
 
 export const createOrderSchema = z.object({

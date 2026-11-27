@@ -4,8 +4,43 @@ import { createOrderSchema } from "./validation.js";
 
 const validOrder = {
   customerId: "customer-1",
-  items: [{ description: "Clear monolithic", quantity: 2, unitPrice: "12.50" }],
+  items: [{
+    description: "Clear monolithic",
+    quantity: 2,
+    unitPrice: "12.50",
+    glassUnit: {
+      overallWidth: 12,
+      overallHeight: 12,
+      construction: "MONOLITHIC",
+      notes: "",
+      panes: [{
+        glassProductId: "glass-1",
+        width: 12,
+        height: 12,
+        thickness: 0.25,
+        lowESide: null,
+        heatTreatment: "NONE",
+        hasHoles: false,
+        flatPolish: false,
+        bevel: false,
+        surfaces: [
+          { side: "A", treatmentIds: [] },
+          { side: "B", treatmentIds: [] },
+        ],
+      }],
+      interlayers: [],
+      cavities: [],
+    },
+  }],
 };
+
+test("requires a complete glass specification for every order item", () => {
+  const { glassUnit: _glassUnit, ...itemWithoutSpecification } = validOrder.items[0]!;
+  assert.throws(() => createOrderSchema.parse({
+    ...validOrder,
+    items: [itemWithoutSpecification],
+  }));
+});
 
 test("accepts order prices with up to two decimal places", () => {
   const parsed = createOrderSchema.parse(validOrder);

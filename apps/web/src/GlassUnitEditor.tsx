@@ -1,13 +1,15 @@
-import { Fragment, useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "./api";
 import { formatInches } from "./format-inches";
 import type { GlassCatalogEntry, GlassCatalogKind, GlassUnit, GlassUnitInput } from "./types";
 
 type Props = {
-  orderItemId: string;
+  orderItemId?: string;
   unit: GlassUnit | null;
+  initialDraft?: GlassUnitInput | null;
   catalogs: GlassCatalogEntry[];
-  onSaved: () => void;
+  onSaved?: () => void;
+  onDraftSaved?: (draft: GlassUnitInput) => void;
 };
 
 const kindNames: Record<GlassCatalogKind, string> = {
@@ -162,17 +164,18 @@ function CatalogSelect({
   );
 }
 
-export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props) {
-  const [draft, setDraft] = useState<GlassUnitInput>(() => unit ? draftFromUnit(unit) : blankDraft(catalogs));
+export function GlassUnitEditor({ orderItemId, unit, initialDraft, catalogs, onSaved, onDraftSaved }: Props) {
+  const [draft, setDraft] = useState<GlassUnitInput>(() => unit ? draftFromUnit(unit) : initialDraft ?? blankDraft(catalogs));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const draftEditorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setDraft(unit ? draftFromUnit(unit) : blankDraft(catalogs));
+    setDraft(unit ? draftFromUnit(unit) : initialDraft ?? blankDraft(catalogs));
     setError("");
     setNotice("");
-  }, [unit, orderItemId, catalogs]);
+  }, [unit, orderItemId, initialDraft, catalogs]);
 
   function updatePane(index: number, patch: Partial<GlassUnitInput["panes"][number]>) {
     setDraft((current) => ({
@@ -217,13 +220,14 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!orderItemId) return;
     setSaving(true);
     setError("");
     setNotice("");
     try {
       await api.saveGlassUnit(orderItemId, draft);
       setNotice("Glass specification saved.");
-      onSaved();
+      onSaved?.();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not save the glass specification.");
     } finally {
@@ -255,6 +259,27 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
     && draft.interlayers.length > 0
     && draft.cavities.length > 0
   );
+
+  function applyDraft() {
+    if (!onDraftSaved) return;
+    setError("");
+    if (!hasCatalogKinds) {
+      setError("Add active entries to each required catalog before applying this specification.");
+      return;
+    }
+    if (!isComplete) {
+      setError("Assign every pane gap to the required construction before applying this specification.");
+      return;
+    }
+    const invalidControl = Array.from(
+      draftEditorRef.current?.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select") ?? [],
+    ).find((control) => !control.checkValidity());
+    if (invalidControl) {
+      invalidControl.reportValidity();
+      return;
+    }
+    onDraftSaved(draft);
+  }
 
   function setGapType(gapNumber: number, type: "NONE" | "LAMINATED" | "INSULATED") {
     setDraft((current) => {
@@ -302,10 +327,8 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
     </section>;
   }
 
-  return (
-    <form className="glass-unit-editor form-stack" onSubmit={(event) => void submit(event)}>
-      {error && <div className="alert error" role="alert">{error}</div>}
-      {notice && <div className="alert success" role="status">{notice}</div>}
+  const editorFields = (
+    <>
       {!hasCatalogKinds && <p className="form-hint">Add active entries to each catalog in the Catalogs tab before saving a glass specification.</p>}
       <div className="line-fields">
         <label>Overall width (in)<input required type="number" min="0.0001" step="0.0001" value={draft.overallWidth} onChange={(event) => setDraft({ ...draft, overallWidth: Number(event.target.value) })} /></label>
@@ -356,7 +379,33 @@ export function GlassUnitEditor({ orderItemId, unit, catalogs, onSaved }: Props)
         </Fragment>
       ))}
       {laminatedInsulated && !isComplete && <p className="gap-validation-hint" role="status">For a laminated-insulated unit, use at least three panes to create separate gaps. Assign every gap to either laminated or insulating, with at least one of each, before saving.</p>}
-      <button className="primary-button" type="submit" disabled={saving || !hasCatalogKinds || !isComplete}>{saving ? "Saving specification…" : unit ? "Update glass specification" : "Save glass specification"}<span>→</span></button>
+    </>
+  );
+  const editorAction = (
+    <button
+      className="primary-button"
+      type={onDraftSaved ? "button" : "submit"}
+      onClick={onDraftSaved ? applyDraft : undefined}
+      disabled={saving || !hasCatalogKinds || !isComplete}
+    >
+      {onDraftSaved ? "Use this specification" : saving ? "Saving specification…" : unit ? "Update glass specification" : "Save glass specification"}<span>→</span>
+    </button>
+  );
+  if (onDraftSaved) {
+    return (
+      <div className="glass-unit-editor form-stack" ref={draftEditorRef}>
+        {error && <div className="alert error" role="alert">{error}</div>}
+        {editorFields}
+        {editorAction}
+      </div>
+    );
+  }
+  return (
+    <form className="glass-unit-editor form-stack" onSubmit={(event) => void submit(event)}>
+      {error && <div className="alert error" role="alert">{error}</div>}
+      {notice && <div className="alert success" role="status">{notice}</div>}
+      {editorFields}
+      {editorAction}
     </form>
   );
 }

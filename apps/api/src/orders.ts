@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { prisma } from "./db.js";
 import { NotFoundError } from "./errors.js";
-import { glassUnitInclude } from "./glass-specifications.js";
+import { glassUnitInclude, saveGlassUnitForOrderItem } from "./glass-specifications.js";
 import { serializeOrder } from "./serializers.js";
 import { createOrderSchema, updateOrderSchema } from "./validation.js";
 
@@ -82,7 +82,16 @@ ordersRouter.post("/", async (request, response, next) => {
         },
       };
 
-      return transaction.order.create({ data, include: orderInclude });
+      const createdOrder = await transaction.order.create({ data, include: orderInclude });
+      for (const [index, orderItem] of createdOrder.items.entries()) {
+        const itemInput = input.items[index];
+        if (!itemInput) throw new Error("Order items do not match their glass specifications.");
+        await saveGlassUnitForOrderItem(transaction, orderItem.id, itemInput.glassUnit);
+      }
+      return transaction.order.findUniqueOrThrow({
+        where: { id: createdOrder.id },
+        include: orderInclude,
+      });
     });
     response.status(201).json(serializeOrder(order));
   } catch (error) {
