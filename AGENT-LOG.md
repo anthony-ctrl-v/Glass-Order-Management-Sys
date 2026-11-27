@@ -157,8 +157,7 @@ This file records agent-assisted work and the related user verification for this
 - Current relational tables: `Customer` stores company identity, phone/email, and default billing/shipping addresses; `CustomerContact` stores that customer's default contact; `Order` stores customer relationship, generated order number, due date/status, and per-order address/contact snapshots; `OrderItem` stores each order line's description, quantity, unit price, and line number; `GlassCatalogEntry` stores categorized glass products, surface treatments, interlayer materials/colors, and spacer types/colors (including Low-E and facility-work flags); `GlassUnit` stores an order item's overall dimensions, construction, and notes; `PaneSpecification` stores each ordered pane's product, position, dimensions, thickness, Low-E side, heat treatment, holes, and edge work; `PaneSurface` stores Side A or B per pane; `PaneSurfaceTreatment` links catalog treatments to a surface in sequence; `GlassInterlayer` stores sequenced interlayer sheets and their material/color/thickness/brand for a pane gap; `InsulatingCavity` stores spacer/color, width, gas-filled status, and adjacent panes for a pane gap. Production tracking tables (physical units/panes, departments, checklist steps/scans/audits, and staff) do not exist yet; they are part of future scope.
 - Tests or checks run: Verified PR #10 is merged and issues #5–#9 are closed in GitHub; fetched and fast-forwarded local `main` to `b734077`; confirmed `git status` is clean and `main` matches `origin/main`.
 - Follow-up:
-  - Resume by agreeing on milestone 3 scope, using the existing requirements as a starting point while confirming priorities and boundaries with the user.
-  - After scope agreement, prepare milestone 3 issues and assign them to the GitHub milestone before creating its feature branch.
+  - Resolved 2026-11-26: The user agreed on Physical Tracking scope and created issues #18–#20 in that milestone. Implementation began with issue #18.
 
 ## Issue #015 — Customer and Order Workflow Follow-ups
 
@@ -201,3 +200,17 @@ This file records agent-assisted work and the related user verification for this
   - Issue: #13 — Manage order items and calculating pricing (Customers and Orders milestone)
   - Commit or tag: `feac237` — edit saved order-item quantity and pricing
   - Pull request: #16 — feat: edit saved order item pricing (merged)
+
+## Issue #018 — Add Physical Unit and Pane Tracking Records
+
+- Date: 2026-11-26
+- Agent: GitHub Copilot
+- Work completed: Added Prisma models for physical glass units and physical panes. Units belong to order items and have unique per-item unit numbers; physical panes link to a unit and a saved pane specification/position, with uniqueness constraints per unit. Generated and applied the additive PostgreSQL migration locally.
+- Tests or checks run: Prisma schema validation and client generation passed; migration `20261127035553_physical_tracking_records` applied locally; API tests (22) passed; API and web builds passed; `git diff --check` passed.
+- User verification: Not yet performed; this issue adds data structures and a migration rather than a user-visible workflow.
+- Follow-up:
+  - Review and create a PR for issue #18; release-triggered generation and editing locks are tracked separately in issue #19.
+- Related Work:
+  - Issue: #18 — Add physical unit and pane records (Physical Tracking milestone)
+  - Commit or tag: None
+  - Pull request: None

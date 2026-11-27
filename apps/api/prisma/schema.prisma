@@ -108,19 +108,45 @@ model Order {
 }
 
 model OrderItem {
-  id          String     @id @default(cuid())
-  orderId     String
-  lineNumber  Int
-  description String
-  quantity    Int
-  unitPrice   Decimal    @db.Decimal(12, 2)
-  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  glassUnit   GlassUnit?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id            String              @id @default(cuid())
+  orderId       String
+  lineNumber    Int
+  description   String
+  quantity      Int
+  unitPrice     Decimal             @db.Decimal(12, 2)
+  order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  glassUnit     GlassUnit?
+  physicalUnits PhysicalGlassUnit[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
   @@unique([orderId, lineNumber])
   @@index([orderId])
+}
+
+model PhysicalGlassUnit {
+  id          String         @id @default(cuid())
+  orderItemId String
+  unitNumber  Int
+  orderItem   OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  panes       PhysicalPane[]
+  createdAt   DateTime       @default(now())
+
+  @@unique([orderItemId, unitNumber])
+}
+
+model PhysicalPane {
+  id                  String            @id @default(cuid())
+  physicalUnitId      String
+  paneSpecificationId String
+  panePosition        Int
+  physicalUnit        PhysicalGlassUnit @relation(fields: [physicalUnitId], references: [id], onDelete: Restrict)
+  paneSpecification   PaneSpecification @relation(fields: [paneSpecificationId], references: [id], onDelete: Restrict)
+  createdAt           DateTime          @default(now())
+
+  @@unique([physicalUnitId, panePosition])
+  @@unique([physicalUnitId, paneSpecificationId])
+  @@index([paneSpecificationId])
 }
 
 model GlassCatalogEntry {
@@ -180,6 +206,7 @@ model PaneSpecification {
   rightInterlayers GlassInterlayer[]  @relation("InterlayerRightPane")
   leftCavities     InsulatingCavity[] @relation("CavityLeftPane")
   rightCavities    InsulatingCavity[] @relation("CavityRightPane")
+  physicalPanes    PhysicalPane[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
