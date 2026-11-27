@@ -3,7 +3,15 @@ import { api } from "./api";
 import { GlassCatalogManager } from "./GlassCatalogManager";
 import { GlassUnitEditor } from "./GlassUnitEditor";
 import { formatInches } from "./format-inches";
-import type { Customer, GlassCatalogEntry, GlassUnit, GlassUnitInput, Order, OrderItem } from "./types";
+import type {
+  Customer,
+  GlassCatalogEntry,
+  GlassUnit,
+  GlassUnitInput,
+  Order,
+  OrderItem,
+  OrderItemPhysicalTracking,
+} from "./types";
 
 type CustomerForm = {
   legalName: string;
@@ -96,9 +104,46 @@ function formatCurrency(value: string) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value));
 }
 
+type PhysicalTrackingDisplayProps = {
+  lineNumber: number;
+  isLoading: boolean;
+  hasLoaded: boolean;
+  tracking: OrderItemPhysicalTracking | undefined;
+  onRetry: () => void;
+};
+
+function PhysicalTrackingDisplay({
+  lineNumber,
+  isLoading,
+  hasLoaded,
+  tracking,
+  onRetry,
+}: PhysicalTrackingDisplayProps) {
+  return (
+    <section className="physical-tracking" aria-label={`Physical tracking for line ${lineNumber}`}>
+      <h4>Physical tracking</h4>
+      {isLoading ? <p className="form-hint">Loading tracking records…</p> : !hasLoaded ? (
+        <button className="edit-button" type="button" onClick={onRetry}>Retry loading tracking records</button>
+      ) : !tracking || tracking.physicalUnits.length === 0 ? (
+        <p className="form-hint">No physical units are recorded for this order item.</p>
+      ) : (
+        <ol className="physical-unit-list">
+          {tracking.physicalUnits.map((unit) => <li className="physical-unit" key={unit.id}>
+            <div className="physical-unit-heading"><strong>Unit {unit.unitNumber}</strong><code>{unit.identifier}</code></div>
+            <ul className="physical-pane-list">
+              {unit.panes.map((pane) => <li key={pane.id}><span>Pane {pane.panePosition}</span><code>{pane.identifier}</code></li>)}
+            </ul>
+          </li>)}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 export default function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [physicalTrackingByOrder, setPhysicalTrackingByOrder] = useState<Record<string, OrderItemPhysicalTracking[]>>({});
   const [glassCatalogs, setGlassCatalogs] = useState<GlassCatalogEntry[]>([]);
   const [activeView, setActiveView] = useState<"orders" | "catalogs">("orders");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -118,6 +163,7 @@ export default function App() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [savingOrderItem, setSavingOrderItem] = useState(false);
   const [releasingOrderId, setReleasingOrderId] = useState<string | null>(null);
+  const [loadingTrackingOrderId, setLoadingTrackingOrderId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -133,6 +179,32 @@ export default function App() {
       setError(caught instanceof Error ? caught.message : "Could not load records.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadPhysicalTracking(orderId: string) {
+    setLoadingTrackingOrderId(orderId);
+    setError("");
+    try {
+      const tracking = await api.orderPhysicalTracking(orderId);
+      setPhysicalTrackingByOrder((current) => ({ ...current, [orderId]: tracking }));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not load physical tracking.");
+    } finally {
+      setLoadingTrackingOrderId((current) => current === orderId ? null : current);
+    }
+  }
+
+  function toggleOrderDetails(order: Order) {
+    if (expandedOrderId === order.id) {
+      setExpandedOrderId(null);
+      return;
+    }
+    setExpandedOrderId(order.id);
+    setEditingSpecItemId(null);
+    setEditingOrderItem(null);
+    if (order.releasedAt && !physicalTrackingByOrder[order.id]) {
+      void loadPhysicalTracking(order.id);
     }
   }
 
@@ -245,6 +317,7 @@ export default function App() {
     try {
       await api.releaseOrder(order.id);
       await refresh();
+      await loadPhysicalTracking(order.id);
       setNotice(`Order #${order.orderNumber} was released.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not release the order.");
@@ -382,7 +455,7 @@ export default function App() {
                               : <><option value="DRAFT">Draft</option><option value="OPEN">Open</option><option value="CANCELLED">Cancelled</option></>}
                           </select></td>
                           <td className="align-right">{formatCurrency(order.totalPrice)}</td>
-                          <td><button className="edit-button" type="button" aria-expanded={expandedOrderId === order.id} onClick={() => { setExpandedOrderId(expandedOrderId === order.id ? null : order.id); setEditingSpecItemId(null); setEditingOrderItem(null); }}>{expandedOrderId === order.id ? "Hide" : "Items"}</button></td>
+                          <td><button className="edit-button" type="button" aria-expanded={expandedOrderId === order.id} onClick={() => toggleOrderDetails(order)}>{expandedOrderId === order.id ? "Hide" : "Items"}</button></td>
                         </tr>
                         {expandedOrderId === order.id && <tr key={`${order.id}-details`} className="order-detail-row"><td colSpan={7}>
                           <div className="order-items-detail">
@@ -431,6 +504,13 @@ export default function App() {
                               </div>
                             </form>}
                             {item.glassUnit ? <GlassUnitSummary unit={item.glassUnit} /> : <p className="form-hint">No structured glass specification has been saved for this order item yet.</p>}
+                            {order.releasedAt && <PhysicalTrackingDisplay
+                              lineNumber={item.lineNumber}
+                              isLoading={loadingTrackingOrderId === order.id}
+                              hasLoaded={physicalTrackingByOrder[order.id] !== undefined}
+                              tracking={physicalTrackingByOrder[order.id]?.find((entry) => entry.id === item.id)}
+                              onRetry={() => void loadPhysicalTracking(order.id)}
+                            />}
                             {editingSpecItemId === item.id && <GlassUnitEditor orderItemId={item.id} unit={item.glassUnit} catalogs={glassCatalogs} onSaved={() => void refresh()} />}
                           </section>)}
                           </div>

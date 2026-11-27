@@ -118,6 +118,15 @@ td:last-child, th:last-child { padding-right: 22px; }
 .glass-unit-summary { color: #5b6d72; font-size: 10px; line-height: 1.6; }
 .glass-unit-summary p { margin: 4px 0; }
 .glass-unit-summary > p:first-child { color: #42746f; }
+.physical-tracking { padding: 11px; border: 1px solid #e4ebea; border-radius: 8px; background: #f9fbfb; }
+.physical-tracking h4 { margin: 0 0 8px; color: #42746f; font-size: 10px; }
+.physical-unit-list, .physical-pane-list { display: flex; flex-direction: column; gap: 7px; padding: 0; margin: 0; list-style: none; }
+.physical-unit { padding: 9px; border: 1px solid #e8eded; border-radius: 7px; background: #fff; }
+.physical-unit-heading, .physical-pane-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.physical-unit-heading { margin-bottom: 7px; }
+.physical-unit-heading strong, .physical-pane-list span { color: #425b60; font-size: 9px; }
+.physical-unit code, .physical-pane-list code { color: #71858a; font-size: 9px; overflow-wrap: anywhere; }
+.physical-pane-list { padding-left: 12px; }
 .pane-summary-list { display: flex; flex-direction: column; gap: 7px; margin: 8px 0; }
 .pane-summary-list > div { display: flex; flex-direction: column; gap: 2px; padding-left: 9px; border-left: 2px solid #cfe3de; }
 .pane-summary-list strong { color: #425b60; font-size: 10px; }
