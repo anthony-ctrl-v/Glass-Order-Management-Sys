@@ -221,11 +221,25 @@ This file records agent-assisted work and the related user verification for this
 - Agent: GitHub Copilot
 - Work completed: Added explicit release for unreleased OPEN orders. Release validates that each item has a pane specification, then atomically stores `releasedAt` and generates one physical unit per ordered quantity and one physical pane per specified pane. Generated identifiers use `{orderNumber}-{lineNumber}-{unitNumber}` for units and append `{panePosition}` for panes. Order, item, and specification edits are locked after release; cancellation remains allowed and retains tracking records. Released orders cannot be reopened.
 - Tests or checks run: Prisma schema validation and client generation passed; migration `20261127040700_order_release` applied locally; API tests (26) passed; API and web builds passed; `git diff --check` passed. A direct local API/database check verified release, generated identifiers, duplicate-release rejection, post-release edit rejection, cancellation, and retained physical units; its temporary data and runner were removed.
-- User verification: A browser smoke check confirmed that release controls render for an OPEN order. The release action was not activated on existing local records; full workflow verification remains pending.
+- User verification: The user confirmed the release control is visible in the website and merged PR #22, closing issue #19. The local API/database check exercised release and cancellation; no existing order was changed during browser verification.
 - Follow-up:
-  - The implementation is on `feature/issue-19-order-release`; it has not yet been committed or pushed.
-  - After browser verification and merge, issue #19 can be closed. Unit/pane detail display is tracked in issue #20.
+  - Unit/pane detail display is tracked in issue #20.
 - Related Work:
   - Issue: #19 — Release orders and generate physical units/panes (Physical Tracking milestone)
+  - Commit or tag: `ca06048` — release orders and generate physical tracking records
+  - Pull request: #22 — Release orders and generate physical tracking records (merged)
+
+## Issue #020 — View Physical Tracking from Order Details
+
+- Date: 2026-11-26
+- Agent: GitHub Copilot
+- Work completed: Added a per-order tracking endpoint and lazy-loaded the tracking data when a released order is expanded. Order details now show physical units grouped under their order item, with unit identifiers and each pane's position and identifier. The details remain accessible for cancelled released orders. Tracking is fetched only for the expanded order; scanning, labels, production history, checklists, and readiness remain out of scope.
+- Tests or checks run: API tests (26) passed; API and web builds passed; `git diff --check` passed. A direct local API/database check verified unit/pane identifiers remain available after cancellation, and browser verification confirmed grouped details render for both a cancelled test order and an existing released order. Temporary test records and runner were removed.
+- User verification: Pending.
+- Follow-up:
+  - The implementation is on `feature/issue-20-view-tracking`; it has not yet been committed or pushed.
+  - After user browser verification and merge, issue #20 can be closed.
+- Related Work:
+  - Issue: #20 — View physical tracking from order details (Physical Tracking milestone)
   - Commit or tag: None
   - Pull request: None

@@ -4,7 +4,12 @@ import { prisma } from "./db.js";
 import { ConflictError, NotFoundError } from "./errors.js";
 import { glassUnitInclude, saveGlassUnitForOrderItem } from "./glass-specifications.js";
 import { lockOrder } from "./order-lock.js";
-import { assertOrderCanBeReleased, assertOrderNotReleased, buildPhysicalUnitSeeds } from "./physical-tracking.js";
+import {
+  assertOrderCanBeReleased,
+  assertOrderNotReleased,
+  buildPhysicalUnitSeeds,
+  physicalUnitTrackingSelect,
+} from "./physical-tracking.js";
 import { serializeOrder } from "./serializers.js";
 import { createOrderSchema, updateOrderItemSchema, updateOrderSchema } from "./validation.js";
 
@@ -22,6 +27,29 @@ ordersRouter.get("/", async (_request, response, next) => {
       orderBy: { createdAt: "desc" },
     });
     response.json(orders.map(serializeOrder));
+  } catch (error) {
+    next(error);
+  }
+});
+
+ordersRouter.get("/:id/physical-tracking", async (request, response, next) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: request.params.id },
+      select: {
+        items: {
+          orderBy: { lineNumber: "asc" },
+          select: {
+            id: true,
+            lineNumber: true,
+            description: true,
+            physicalUnits: physicalUnitTrackingSelect,
+          },
+        },
+      },
+    });
+    if (!order) throw new NotFoundError("Order not found.");
+    response.json(order.items);
   } catch (error) {
     next(error);
   }

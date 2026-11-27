@@ -45,6 +45,26 @@ export type OrderItem = {
   glassUnit: GlassUnit | null;
 };
 
+export type PhysicalPaneTracking = {
+  id: string;
+  panePosition: number;
+  identifier: string;
+};
+
+export type PhysicalUnitTracking = {
+  id: string;
+  unitNumber: number;
+  identifier: string;
+  panes: PhysicalPaneTracking[];
+};
+
+export type OrderItemPhysicalTracking = {
+  id: string;
+  lineNumber: number;
+  description: string;
+  physicalUnits: PhysicalUnitTracking[];
+};
+
 export type GlassCatalogKind =
   | "GLASS_PRODUCT"
   | "SURFACE_TREATMENT"

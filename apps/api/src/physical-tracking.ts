@@ -1,5 +1,18 @@
-import { type OrderStatus } from "@prisma/client";
+import { Prisma, type OrderStatus } from "@prisma/client";
 import { ConflictError } from "./errors.js";
+
+export const physicalUnitTrackingSelect = {
+  orderBy: { unitNumber: "asc" as const },
+  select: {
+    id: true,
+    unitNumber: true,
+    identifier: true,
+    panes: {
+      orderBy: { panePosition: "asc" as const },
+      select: { id: true, panePosition: true, identifier: true },
+    },
+  },
+} satisfies Prisma.PhysicalGlassUnitFindManyArgs;
 
 type PaneSpecificationForRelease = {
   id: string;
