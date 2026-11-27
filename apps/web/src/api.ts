@@ -1,4 +1,4 @@
-import type { Customer, GlassCatalogEntry, GlassUnit, GlassUnitInput, Order } from "./types";
+import type { Customer, GlassCatalogEntry, GlassUnit, GlassUnitInput, Order, OrderItem } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -39,6 +39,8 @@ export const api = {
     request<Order>("/orders", { method: "POST", body: JSON.stringify(body) }),
   updateOrder: (id: string, body: unknown) =>
     request<Order>(`/orders/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  updateOrderItem: (orderId: string, itemId: string, body: { quantity: number; unitPrice: string }) =>
+    request<OrderItem>(`/orders/${orderId}/items/${itemId}`, { method: "PATCH", body: JSON.stringify(body) }),
   glassCatalogs: () => request<GlassCatalogEntry[]>("/glass-catalogs"),
   createGlassCatalog: (body: Omit<GlassCatalogEntry, "id">) =>
     request<GlassCatalogEntry>("/glass-catalogs", { method: "POST", body: JSON.stringify(body) }),

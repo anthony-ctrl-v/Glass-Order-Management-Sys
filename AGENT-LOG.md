@@ -173,8 +173,7 @@ This file records agent-assisted work and the related user verification for this
 - User asked for help creating/assigning issues to the Customers and Orders milestone and marking completed work. User chose to expand the issue criteria: record customer/default-contact management as a completed issue (customer deletion is not requested); keep order creation with required initial glass specifications and order-item quantity/pricing management as open issues until implemented.
 - Follow-up:
   - Review which existing Customers and Orders functionality can be documented and closed as completed.
-  - Verify and review the initial-order glass specification implementation on its feature branch; leave the GitHub issue open until reviewed and merged.
-  - Track order-item pricing and quantity management as unfinished work.
+  - Implement and verify order-item pricing and quantity editing after order creation.
 
 ## Issue #016 — Require Glass Specifications During Order Creation
 
@@ -182,10 +181,22 @@ This file records agent-assisted work and the related user verification for this
 - Agent: GitHub Copilot
 - Work completed: Started the next requested enhancement on `feature/order-create-requires-glass-spec`. Added the existing glass-unit editor to each order-item draft so the user must apply a valid specification before submitting an order. The create-order API now requires a glass-unit specification on every item and persists all order items and specifications in one transaction. Extracted shared glass-unit persistence/catalog validation so the existing post-creation specification editor and new order-creation flow use the same logic.
 - Tests or checks run: API suite passed (20 tests), API TypeScript build passed, web TypeScript/production build passed, and `git diff --check` passed.
-- User verification: The user created GitHub issue #14 and tested the website flow, confirming the implementation behaves as expected.
-- Follow-up:
-  - Create a pull request from `feature/order-create-requires-glass-spec` with `Closes #14` in its description, then merge after review so GitHub closes the issue.
+- User verification: The user created GitHub issue #14 and confirmed the website flow worked. PR #15 was merged into `main`, and GitHub closed issue #14.
 - Related Work:
   - Issue: #14 — created by the user
   - Commit or tag: `bb61ef4` — require glass specifications during order creation
+  - Pull request: #15 — Require glass specifications during order creation (merged)
+
+## Issue #017 — Edit Saved Order-Item Quantity and Pricing
+
+- Date: 2026-11-26
+- Agent: GitHub Copilot
+- Work completed: Added saved order-item editing for quantity and unit price. The order detail view exposes an edit form, shows the line total, and refreshes the calculated order total after saving. Added a `PATCH /orders/:id/items/:itemId` endpoint that verifies the item belongs to the order and validates quantity and price. Per the user's decision, cancelled orders reject edits with a conflict response and the UI disables editing.
+- Tests or checks run: API suite passed (22 tests), API TypeScript build passed, web TypeScript/production build passed, and `git diff --check` passed.
+- User verification: The user confirmed in the browser that saved order-item quantity and pricing edits work as expected.
+- Follow-up:
+  - Create a pull request that closes issue #13, then merge it after review.
+- Related Work:
+  - Issue: #13 — Manage order items and calculating pricing (Customers and Orders milestone)
+  - Commit or tag: None
   - Pull request: None

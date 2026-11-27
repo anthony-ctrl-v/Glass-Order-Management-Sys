@@ -3,7 +3,7 @@ import { api } from "./api";
 import { GlassCatalogManager } from "./GlassCatalogManager";
 import { GlassUnitEditor } from "./GlassUnitEditor";
 import { formatInches } from "./format-inches";
-import type { Customer, GlassCatalogEntry, GlassUnit, GlassUnitInput, Order } from "./types";
+import type { Customer, GlassCatalogEntry, GlassUnit, GlassUnitInput, Order, OrderItem } from "./types";
 
 type CustomerForm = {
   legalName: string;
@@ -33,6 +33,13 @@ type ItemDraft = {
   quantity: number;
   unitPrice: string;
   glassUnit: GlassUnitInput | null;
+};
+
+type OrderItemEditDraft = {
+  orderId: string;
+  itemId: string;
+  quantity: string;
+  unitPrice: string;
 };
 
 const emptyCustomer: CustomerForm = {
@@ -96,6 +103,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<"orders" | "catalogs">("orders");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [editingSpecItemId, setEditingSpecItemId] = useState<string | null>(null);
+  const [editingOrderItem, setEditingOrderItem] = useState<OrderItemEditDraft | null>(null);
   const [customerForm, setCustomerForm] = useState<CustomerForm>(emptyCustomer);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [editingSpecDraftIndex, setEditingSpecDraftIndex] = useState<number | null>(null);
@@ -108,6 +116,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
+  const [savingOrderItem, setSavingOrderItem] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -216,10 +225,44 @@ export default function App() {
     setNotice("");
     try {
       await api.updateOrder(order.id, { status });
+      if (status === "CANCELLED") setEditingOrderItem(null);
       await refresh();
       setNotice(`Order ${order.orderNumber} status updated.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not update order status.");
+    }
+  }
+
+  function editOrderItem(orderId: string, item: OrderItem) {
+    setEditingSpecItemId(null);
+    setEditingOrderItem({
+      orderId,
+      itemId: item.id,
+      quantity: String(item.quantity),
+      unitPrice: item.unitPrice,
+    });
+    setError("");
+    setNotice("");
+  }
+
+  async function saveOrderItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingOrderItem) return;
+    setSavingOrderItem(true);
+    setError("");
+    setNotice("");
+    try {
+      await api.updateOrderItem(editingOrderItem.orderId, editingOrderItem.itemId, {
+        quantity: Number(editingOrderItem.quantity),
+        unitPrice: editingOrderItem.unitPrice,
+      });
+      setEditingOrderItem(null);
+      await refresh();
+      setNotice("Order item quantity and price updated.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update the order item.");
+    } finally {
+      setSavingOrderItem(false);
     }
   }
 
@@ -315,11 +358,33 @@ export default function App() {
                           <td>{order.dueDate ? new Date(`${order.dueDate}T00:00:00`).toLocaleDateString() : <span className="muted">—</span>}</td>
                           <td><select className={`status-select ${order.status.toLowerCase()}`} aria-label={`Order ${order.orderNumber} status`} value={order.status} onChange={(event) => void changeOrderStatus(order, event.target.value as Order["status"])}><option value="DRAFT">Draft</option><option value="OPEN">Open</option><option value="CANCELLED">Cancelled</option></select></td>
                           <td className="align-right">{formatCurrency(order.totalPrice)}</td>
-                          <td><button className="edit-button" type="button" aria-expanded={expandedOrderId === order.id} onClick={() => { setExpandedOrderId(expandedOrderId === order.id ? null : order.id); setEditingSpecItemId(null); }}>{expandedOrderId === order.id ? "Hide" : "Items"}</button></td>
+                          <td><button className="edit-button" type="button" aria-expanded={expandedOrderId === order.id} onClick={() => { setExpandedOrderId(expandedOrderId === order.id ? null : order.id); setEditingSpecItemId(null); setEditingOrderItem(null); }}>{expandedOrderId === order.id ? "Hide" : "Items"}</button></td>
                         </tr>
                         {expandedOrderId === order.id && <tr key={`${order.id}-details`} className="order-detail-row"><td colSpan={7}>
                           <div className="order-items-detail">{order.items.map((item) => <section className="order-item-detail" key={item.id}>
-                            <div className="item-detail-heading"><div><strong>Line {item.lineNumber}: {item.description}</strong><span>{item.quantity} unit{item.quantity === 1 ? "" : "s"} · {formatCurrency(item.unitPrice)} each</span></div><button className="edit-button" type="button" aria-expanded={editingSpecItemId === item.id} onClick={() => setEditingSpecItemId(editingSpecItemId === item.id ? null : item.id)}>{editingSpecItemId === item.id ? "Close editor" : item.glassUnit ? "Edit specification" : "Add specification"}</button></div>
+                            <div className="item-detail-heading">
+                              <div>
+                                <strong>Line {item.lineNumber}: {item.description}</strong>
+                                <span>{item.quantity} unit{item.quantity === 1 ? "" : "s"} × {formatCurrency(item.unitPrice)} = {formatCurrency(item.lineTotal)}</span>
+                              </div>
+                              <div className="item-detail-actions">
+                                {order.status === "CANCELLED"
+                                  ? <span className="muted">Editing locked for cancelled orders</span>
+                                  : <button className="edit-button" type="button" aria-expanded={editingOrderItem?.itemId === item.id} onClick={() => editingOrderItem?.itemId === item.id ? setEditingOrderItem(null) : editOrderItem(order.id, item)}>{editingOrderItem?.itemId === item.id ? "Close item editor" : "Edit quantity / price"}</button>}
+                                <button className="edit-button" type="button" aria-expanded={editingSpecItemId === item.id} onClick={() => { setEditingOrderItem(null); setEditingSpecItemId(editingSpecItemId === item.id ? null : item.id); }}>{editingSpecItemId === item.id ? "Close specification" : item.glassUnit ? "Edit specification" : "Add specification"}</button>
+                              </div>
+                            </div>
+                            {editingOrderItem?.itemId === item.id && <form className="item-edit-form form-stack" onSubmit={(event) => void saveOrderItem(event)}>
+                              <div className="line-fields">
+                                <label>Quantity<input required type="number" min="1" max="100000" step="1" value={editingOrderItem.quantity} onChange={(event) => setEditingOrderItem({ ...editingOrderItem, quantity: event.target.value })} /></label>
+                                <label>Unit price<input required type="number" min="0" max="9999999999.99" step="0.01" value={editingOrderItem.unitPrice} onChange={(event) => setEditingOrderItem({ ...editingOrderItem, unitPrice: event.target.value })} /></label>
+                              </div>
+                              <p className="form-hint">The line total and order total will recalculate when saved.</p>
+                              <div className="item-edit-actions">
+                                <button className="primary-button" type="submit" disabled={savingOrderItem}>{savingOrderItem ? "Saving changes…" : "Save changes"}</button>
+                                <button className="secondary-button" type="button" disabled={savingOrderItem} onClick={() => setEditingOrderItem(null)}>Cancel</button>
+                              </div>
+                            </form>}
                             {item.glassUnit ? <GlassUnitSummary unit={item.glassUnit} /> : <p className="form-hint">No structured glass specification has been saved for this order item yet.</p>}
                             {editingSpecItemId === item.id && <GlassUnitEditor orderItemId={item.id} unit={item.glassUnit} catalogs={glassCatalogs} onSaved={() => void refresh()} />}
                           </section>)}</div>
